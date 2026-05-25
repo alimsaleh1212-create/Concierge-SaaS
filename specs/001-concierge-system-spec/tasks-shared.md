@@ -63,13 +63,13 @@ before day-one coding begins (Monday). The rest have Tuesday/Wednesday deadlines
 start work without merge conflicts on directory creation. One person drives on a
 shared screen; everyone else reviews.
 
-- [ ] T-S016 Create all top-level directories per `plan.md` project structure: `api/`, `modelserver/`, `guardrails/`, `widget/`, `admin/`, `evals/`, `notebooks/`, `prompts/`, `.github/workflows/` in the repo root
-- [ ] T-S017 Create all `api/app/` subdirectories: `core/`, `models/`, `repositories/`, `services/`, `agent/agent/tools/`, `rag/`, `api/platform/`, `api/admin/`, `api/chat/`, `api/auth/` with `.gitkeep` files
-- [ ] T-S018 [P] Create `evals/classifier/`, `evals/agent/`, `evals/rag/` with `.gitkeep` files in `evals/`
-- [ ] T-S019 [P] Create `api/tests/unit/`, `api/tests/integration/`, `api/tests/red_team/`, `api/tests/evals/` with `.gitkeep` files
-- [ ] T-S020 [P] Create `api/alembic/versions/` directory with `.gitkeep` in `api/alembic/versions/`
-- [ ] T-S021 [P] Create `api/seeds/` directory with `__init__.py` stub in `api/seeds/__init__.py`
-- [ ] T-S022 Create `.gitignore` covering: `__pycache__/`, `*.pyc`, `.env`, `*.joblib`, `*.onnx`, `node_modules/`, `dist/`, `.DS_Store`, `*.egg-info/`, `.venv/`, `vault-data/` in `.gitignore`
+- [X] T-S016 Create all top-level directories per `plan.md` project structure: `api/`, `modelserver/`, `guardrails/`, `widget/`, `admin/`, `evals/`, `notebooks/`, `prompts/`, `.github/workflows/` in the repo root
+- [X] T-S017 Create all `api/app/` subdirectories: `core/`, `models/`, `repositories/`, `services/`, `agent/agent/tools/`, `rag/`, `api/platform/`, `api/admin/`, `api/chat/`, `api/auth/` with `.gitkeep` files
+- [X] T-S018 [P] Create `evals/classifier/`, `evals/agent/`, `evals/rag/` with `.gitkeep` files in `evals/`
+- [X] T-S019 [P] Create `api/tests/unit/`, `api/tests/integration/`, `api/tests/red_team/`, `api/tests/evals/` with `.gitkeep` files
+- [X] T-S020 [P] Create `api/alembic/versions/` directory with `.gitkeep` in `api/alembic/versions/`
+- [X] T-S021 [P] Create `api/seeds/` directory with `__init__.py` stub in `api/seeds/__init__.py`
+- [X] T-S022 Create `.gitignore` covering: `__pycache__/`, `*.pyc`, `.env`, `*.joblib`, `*.onnx`, `node_modules/`, `dist/`, `.DS_Store`, `*.egg-info/`, `.venv/`, `vault-data/` in `.gitignore`
 
 **Checkpoint**: `git status` shows the full directory tree. Every owner can pull and start work in their directories without conflicts.
 
@@ -80,12 +80,12 @@ shared screen; everyone else reviews.
 **Purpose**: Create all required documentation files as stubs on day one so they appear
 in the repo from the start. Owners fill them in as decisions are made.
 
-- [ ] T-S023 [P] Create `DESIGN.md` stub with section headers: Tenant Isolation Strategy, Role Model, Scaling Story (10→1000 tenants), RLS Exception (audit_log) in `DESIGN.md`
-- [ ] T-S024 [P] Create `DECISIONS.md` stub with section headers and a template row: `| Decision | Options Considered | Chosen | Rationale | Number | Date |` in `DECISIONS.md`
-- [ ] T-S025 [P] Create `RUNBOOK.md` stub with section headers: Prerequisites, First-time Setup, Rebuilding Services, Running Evals, Common Issues in `RUNBOOK.md`
-- [ ] T-S026 [P] Create `EVALS.md` stub with section headers: Classifier Results, Agent Tool-Selection Results, RAG Results, Red-Team Results, Inter-Annotator Agreement in `EVALS.md`
-- [ ] T-S027 [P] Create `SECURITY.md` stub with section headers: Threat Model, Isolation Layers, Guardrail Architecture, PII Redaction, Service-to-Service Auth, Erasure Path in `SECURITY.md`
-- [ ] T-S028 [P] Create `model_card.md` stub with all required fields from spec §4: Task Description, Dataset (TODO), Three Model Results (TODO), Deployment Choice (TODO), Artifact SHA-256 (TODO) in `model_card.md`
+- [X] T-S023 [P] Create `DESIGN.md` stub with section headers: Tenant Isolation Strategy, Role Model, Scaling Story (10→1000 tenants), RLS Exception (audit_log) in `DESIGN.md`
+- [X] T-S024 [P] Create `DECISIONS.md` stub with section headers and a template row: `| Decision | Options Considered | Chosen | Rationale | Number | Date |` in `DECISIONS.md`
+- [X] T-S025 [P] Create `RUNBOOK.md` stub with section headers: Prerequisites, First-time Setup, Rebuilding Services, Running Evals, Common Issues in `RUNBOOK.md`
+- [X] T-S026 [P] Create `EVALS.md` stub with section headers: Classifier Results, Agent Tool-Selection Results, RAG Results, Red-Team Results, Inter-Annotator Agreement in `EVALS.md`
+- [X] T-S027 [P] Create `SECURITY.md` stub with section headers: Threat Model, Isolation Layers, Guardrail Architecture, PII Redaction, Service-to-Service Auth, Erasure Path in `SECURITY.md`
+- [X] T-S028 [P] Create `model_card.md` stub with all required fields from spec §4: Task Description, Dataset (TODO), Three Model Results (TODO), Deployment Choice (TODO), Artifact SHA-256 (TODO) in `model_card.md`
 
 **Checkpoint**: All 6 required doc files exist in the repo. CI can reference them from day one.
 
@@ -97,7 +97,7 @@ in the repo from the start. Owners fill them in as decisions are made.
 pipeline has something to read from the first push. Real values replace placeholders
 as evals run.
 
-- [ ] T-S029 Create `eval_thresholds.yaml` with exact contents below — commit to main on day one in `eval_thresholds.yaml`:
+- [X] T-S029 Create `eval_thresholds.yaml` with exact contents below — commit to main on day one in `eval_thresholds.yaml`:
 
 ```yaml
 # Concierge CI Eval Thresholds
@@ -134,7 +134,7 @@ smoke_test:
 even before gate logic is implemented.
 
 - [ ] T-S030 Enable branch protection on `main`: require PR review, require CI status checks to pass, no direct push to main in GitHub repository settings
-- [ ] T-S031 Create GitHub Actions skeleton workflow `.github/workflows/ci.yml` with stages that pass immediately (no logic yet): lint stub, build stub, gates stub — stages exist so branch protection can reference them; Owner D fills in logic in their tasks in `.github/workflows/ci.yml`
+- [X] T-S031 Create GitHub Actions skeleton workflow `.github/workflows/ci.yml` with stages that pass immediately (no logic yet): lint stub, build stub, gates stub — stages exist so branch protection can reference them; Owner D fills in logic in their tasks in `.github/workflows/ci.yml`
 - [ ] T-S032 [P] Push the full spec artifact tree to main: `specs/001-concierge-system-spec/` (all docs + contracts), `eval_thresholds.yaml`, all stub docs, `.gitignore` — confirm CI passes on first push
 
 **Checkpoint**: Main branch is protected. CI runs and passes (stubs only). Every subsequent PR must pass CI before merge.
@@ -146,11 +146,11 @@ even before gate logic is implemented.
 **Purpose**: Decisions that must be made verbally and recorded in writing before coding.
 These have no code artifact — they live in DECISIONS.md.
 
-- [ ] T-S033 Record the `tenant_id` convention decision in `DECISIONS.md`: UUID, direct column on every tenant-scoped table, sourced from verified JWT only, never from request body — agreed by all four owners on 2026-05-25
-- [ ] T-S034 Record the "high confidence" routing threshold definition in `DECISIONS.md`: Owner B proposes the value (e.g. 0.80); team agrees; written down before router is implemented
-- [ ] T-S035 [P] Record the Redis rolling TTL justification in `DECISIONS.md`: 30 minutes from last message — balances usability vs anonymous visitor privacy
-- [ ] T-S036 [P] Record the widget JWT expiry justification in `DECISIONS.md`: 1 hour — short enough to limit replay risk, long enough for a normal visitor session
-- [ ] T-S037 Agree on demo tenant CMS content scope: Mario's Pizza gets 5 CMS items (menu, hours, delivery FAQ, location, specials); Lawson & Partners gets 5 CMS items (practice areas, team bios, consultation FAQ, fees, contact) — these seed the RAG golden set too; record in `DECISIONS.md`
+- [X] T-S033 Record the `tenant_id` convention decision in `DECISIONS.md`: UUID, direct column on every tenant-scoped table, sourced from verified JWT only, never from request body — agreed by all four owners on 2026-05-25
+- [X] T-S034 Record the "high confidence" routing threshold definition in `DECISIONS.md`: Owner B proposes the value (e.g. 0.80); team agrees; written down before router is implemented
+- [X] T-S035 [P] Record the Redis rolling TTL justification in `DECISIONS.md`: 30 minutes from last message — balances usability vs anonymous visitor privacy
+- [X] T-S036 [P] Record the widget JWT expiry justification in `DECISIONS.md`: 1 hour — short enough to limit replay risk, long enough for a normal visitor session
+- [X] T-S037 Agree on demo tenant CMS content scope: Mario's Pizza gets 5 CMS items (menu, hours, delivery FAQ, location, specials); Lawson & Partners gets 5 CMS items (practice areas, team bios, consultation FAQ, fees, contact) — these seed the RAG golden set too; record in `DECISIONS.md`
 
 **Checkpoint**: `DECISIONS.md` has at least 5 entries before any owner starts coding.
 

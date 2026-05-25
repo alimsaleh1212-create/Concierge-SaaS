@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# ML artifacts (fetched at build time — never committed)
+*.joblib
+*.onnx
+*.pkl
+*.model
+
+# Vault data
+vault-data/
+
+# Node.js / Widget
+node_modules/
+dist/
+.DS_Store
+
+# Misc
+*.log
+*.tmp
+*.swp
+*.swo
+.idea/
+.vscode/
+Thumbs.db
