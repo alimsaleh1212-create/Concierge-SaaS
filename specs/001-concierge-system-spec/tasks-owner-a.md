@@ -27,9 +27,10 @@ so every other owner can pull and start services without manual environment setu
 - [ ] T-A001 [P] Create `api/requirements.txt` with pinned versions: fastapi==0.115.*, sqlalchemy==2.x, alembic, fastapi-users[sqlalchemy]>=14, pyjwt, anthropic, voyageai, redis, minio, hvac, presidio-analyzer, presidio-anonymizer, asyncpg, pgvector
 - [ ] T-A002 [P] Create `api/app/core/config.py`: Pydantic Settings class that reads all secrets from Vault (via hvac); expose `DATABASE_URL`, `REDIS_URL`, `MINIO_ENDPOINT`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `MODELSERVER_SERVICE_TOKEN`, `GUARDRAILS_SERVICE_TOKEN`
 - [ ] T-A003 [P] Create `.env.example` with the three user-supplied values (`VAULT_ROOT_TOKEN`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`) and comments explaining all other secrets are Vault-managed
-- [ ] T-A004 Create `docker-compose.yml` with services: `api` (port 8000), `modelserver` (port 8001), `guardrails` (port 8002), `admin` (port 8501), `postgres` (port 5432, pgvector image), `redis` (port 6379), `minio` (ports 9000/9001), `vault` (port 8200) — healthchecks on all services; api depends_on postgres, redis, minio, vault
+- [ ] T-A004 Create `docker-compose.yml` with services: `api` (port 8000), `modelserver` (port 8001), `guardrails` (port 8002), `admin` (port 8501), `postgres` (port 5432, pgvector image), `redis` (port 6379), `minio` (ports 9000/9001), `vault` (port 8200, dev mode) — healthchecks on all services; api depends_on postgres, redis, minio, vault
+- [ ] T-A004a Create `vault/init.sh`: shell script that runs on `docker compose up` via a one-shot `vault-init` service; writes all required secrets to Vault dev instance: `DATABASE_URL`, `REDIS_URL`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MODELSERVER_SERVICE_TOKEN`, `GUARDRAILS_SERVICE_TOKEN`; creates MinIO buckets `concierge-widget` and `concierge-cms`; script is idempotent (skips if secrets already exist); exits 0 when complete
 
-**Checkpoint**: `docker compose up --build` starts all services; `curl localhost:8000/health` returns `{"status":"ok"}`.
+**Checkpoint**: `docker compose up --build` starts all services with zero manual steps; Vault auto-unsealed; `curl localhost:8000/health` returns `{"status":"ok"}`.
 
 ---
 
@@ -126,7 +127,7 @@ work end-to-end from first `docker compose up`.
 
 **Purpose**: Per-tenant rate limiting, `GET /health` endpoint, and Alembic baseline cleanup.
 
-- [ ] T-A031 Implement per-tenant rate-limiting middleware using the chosen library (document in DECISIONS.md D-006): apply to all `/chat/messages` requests; key by `tenant_id` from JWT; placeholder thresholds — Owner A sets real values after Tuesday eval run and records in DECISIONS.md
+- [ ] T-A031 Implement per-tenant rate-limiting middleware using Redis token bucket (`redis-py`, already a dep — see DECISIONS.md D-006): apply to all `/chat/messages` requests; key by `tenant_id` from JWT; placeholder thresholds — Owner A sets real values after Tuesday eval run and records in DECISIONS.md
 - [ ] T-A032 [P] Create `GET /health` endpoint returning `{"status":"ok","version":"0.1.0"}` — no auth required — in `api/app/api/__init__.py` or `api/main.py`
 - [ ] T-A033 [P] Create `api/main.py`: FastAPI app factory; include all routers (`platform`, `admin`, `chat`, `auth`); mount Prometheus metrics at `/metrics`; register RLS event listener on app startup
 - [ ] T-A034 [P] Create `api/Dockerfile`: multi-stage build, no torch, final image based on `python:3.12-slim`; copy only `app/` and `requirements.txt`; run `alembic upgrade head` as entrypoint pre-hook; target < 500 MB

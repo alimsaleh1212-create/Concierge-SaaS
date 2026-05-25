@@ -369,6 +369,9 @@ the PR is blocked; revert, confirm it passes.
   via `docker-compose up` without any local language runtime setup.
 - Secrets (API keys, DB URLs, service tokens) are never committed to source. They are
   loaded from Vault at container startup via `.env.example` instructions.
+- Vault runs in **dev mode** in the local Docker Compose stack (auto-unsealed, no manual
+  operator steps). A `vault/init.sh` init script writes all required secrets on first
+  container start. Production Vault configuration is out of scope for the bootcamp demo.
 - The classifier dataset is a public labeled text-classification dataset chosen by
   Owner C on Monday. It is separate from the tenant CMS corpus.
 - The two demo tenants (Mario's Pizza and Lawson and Partners) are seeded by an
@@ -401,3 +404,12 @@ the PR is blocked; revert, confirm it passes.
 | 5 | `capture_lead` exact rate-limit numbers | Owner B | Wednesday 2026-05-27 |
 | 6 | Per-tenant rate-limiting thresholds | Owner A | Tuesday 2026-05-26 |
 | 7 | Redis rolling window size N for sliding TTL | Owner B | Wednesday 2026-05-27 |
+
+---
+
+## Clarifications
+
+### Session 2026-05-26
+
+- Q: How should Vault be bootstrapped in the dev Docker Compose stack? → A: Dev-mode Vault (auto-unsealed) + `vault/init.sh` init script that writes all required secrets on first container start. Zero manual steps required for `docker compose up`.
+- Q: Per-tenant rate-limiting library for `/chat/messages`? → A: Redis token bucket via `redis-py` custom middleware (already a dependency; cluster-safe).
