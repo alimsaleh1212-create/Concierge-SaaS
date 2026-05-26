@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     MINIO_SECRET_KEY: str = ""
     MODELSERVER_SERVICE_TOKEN: str = ""
     GUARDRAILS_SERVICE_TOKEN: str = ""
+    JWT_SECRET: str = ""
 
     class Config:
         env_file = ".env"
@@ -45,3 +46,4 @@ def _load_vault_secrets(settings: Settings) -> None:
     settings.MINIO_SECRET_KEY = data["MINIO_SECRET_KEY"]
     settings.MODELSERVER_SERVICE_TOKEN = data["MODELSERVER_SERVICE_TOKEN"]
     settings.GUARDRAILS_SERVICE_TOKEN = data["GUARDRAILS_SERVICE_TOKEN"]
+    settings.JWT_SECRET = data["JWT_SECRET"]
