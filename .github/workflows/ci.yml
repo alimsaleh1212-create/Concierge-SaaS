@@ -2,33 +2,100 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
   lint:
-    name: Lint
+    name: Lint + Typecheck + Widget Bundle Gate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Lint stub
-        run: echo "Lint stub — Owner D to implement"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install lint tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install ruff mypy
+      - name: Lint API
+        run: |
+          ruff check api/
+          mypy api/
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Install widget dependencies
+        working-directory: widget
+        run: npm install
+      - name: Widget typecheck
+        working-directory: widget
+        run: npm run typecheck
+      - name: Build widget bundle
+        working-directory: widget
+        run: npm run build
+      - name: Enforce widget bundle size
+        working-directory: widget
+        run: |
+          if [ ! -f dist/index.js.gz ]; then
+            echo "dist/index.js.gz not found" >&2
+            exit 1
+          fi
+          size=$(stat -c %s dist/index.js.gz)
+          if [ "$size" -gt 51200 ]; then
+            echo "Widget bundle is ${size} bytes (max 51200)" >&2
+            exit 1
+          fi
 
   build:
-    name: Build
+    name: Docker Build + Image Size Check
     runs-on: ubuntu-latest
     needs: lint
     steps:
       - uses: actions/checkout@v4
-      - name: Build stub
-        run: echo "Build stub — Owner D to implement"
+      - name: Build images
+        run: docker compose build
+      - name: Enforce image size budget
+        run: |
+          services=$(docker compose config --services)
+          for svc in $services; do
+            image_id=$(docker compose images -q "$svc")
+            if [ -z "$image_id" ]; then
+              echo "No image id for $svc" >&2
+              exit 1
+            fi
+            size=$(docker image inspect "$image_id" --format '{{.Size}}')
+            if [ "$size" -gt 524288000 ]; then
+              echo "$svc image size ${size} exceeds 524288000 bytes" >&2
+              exit 1
+            fi
+          done
 
   gates:
     name: Eval Gates
     runs-on: ubuntu-latest
     needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        test:
+          - api/tests/evals/test_classifier.py
+          - api/tests/evals/test_rag.py
+          - api/tests/evals/test_agent.py
+          - api/tests/red_team/test_probes.py
+          - api/tests/evals/test_redaction.py
     steps:
       - uses: actions/checkout@v4
-      - name: Gates stub
-        run: echo "Eval gates stub — Owner D to implement (reads eval_thresholds.yaml)"
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install API dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e "./api[dev]"
+      - name: Run gate
+        run: pytest ${{ matrix.test }} -v

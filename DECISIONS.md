@@ -11,7 +11,7 @@
 | Widget JWT expiry | 30 min, 1 hr, 4 hr | 1 hour | Short enough to limit replay risk; long enough for a normal visitor session | D-004 | 2026-05-25 |
 | Demo tenant CMS content scope | Various | Mario's Pizza: 5 items (menu, hours, delivery FAQ, location, specials); Lawson & Partners: 5 items (practice areas, team bios, consultation FAQ, fees, contact) | Minimal but representative; also seeds the RAG golden set | D-005 | 2026-05-25 |
 | Per-tenant rate-limiting approach | Redis token bucket (redis-py), slowapi | Redis token bucket via redis-py custom middleware | Already a dependency; cluster-safe; no new deps added to API container | D-006 | 2026-05-26 |
-| Tracing backend | OpenTelemetry → Jaeger, OpenTelemetry → Tempo | TODO Owner D — document in this table before day-one coding | Choice affects Docker Compose service count and Grafana stack | D-007 | TODO |
+| Tracing backend | OpenTelemetry → Jaeger, OpenTelemetry → Tempo | OpenTelemetry → Jaeger | Simpler all-in-one UI and collector; fewer moving parts than Tempo + Grafana | D-007 | 2026-05-26 |
 | Classifier dataset | Any public labeled text-classification set | TODO Owner C — record exact dataset name + file SHA-256 in model_card.md and here | Dataset choice is immutable once training starts | D-008 | TODO |
 | Redis sliding window size N (session memory) | TBD | TODO Owner B — set after design; document here before implementation | Window size affects context quality and Redis memory budget | D-009 | TODO |
 | capture_lead rate-limit numbers | TBD | TODO Owner B — set max leads per session + max per visitor IP per hour | Wrong values allow spam or block legitimate leads | D-010 | TODO |
