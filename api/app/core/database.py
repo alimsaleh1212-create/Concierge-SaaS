@@ -21,15 +21,49 @@ def _make_engine():
     )
 
 
-engine = _make_engine()
+_engine = None
+_session_local = None
 
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-    autocommit=False,
-)
+
+def _get_engine():
+    global _engine
+    if _engine is None:
+        _engine = _make_engine()
+    return _engine
+
+
+def _get_session_local():
+    global _session_local
+    if _session_local is None:
+        _session_local = async_sessionmaker(
+            _get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False,
+        )
+    return _session_local
+
+
+def get_session_local():
+    """Return the sessionmaker, creating the engine on first call."""
+    return _get_session_local()
+
+
+# Kept for Alembic env.py and any code that needs a direct engine reference.
+def get_engine():
+    return _get_engine()
+
+
+# Backwards-compatible module-level name used by seeds and tests that
+# import AsyncSessionLocal directly — resolved lazily via __getattr__.
+class _LazySessionLocal:
+    """Proxy so `async with AsyncSessionLocal() as s:` works without eager init."""
+    def __call__(self, *args, **kwargs):
+        return _get_session_local()(*args, **kwargs)
+
+
+AsyncSessionLocal = _LazySessionLocal()
 
 
 async def get_db(tenant_id: str = "") -> AsyncGenerator[AsyncSession, None]:

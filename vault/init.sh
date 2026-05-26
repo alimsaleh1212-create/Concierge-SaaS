@@ -25,8 +25,9 @@ else
     MINIO_ENDPOINT="minio:9000" \
     MINIO_ACCESS_KEY="${MINIO_ROOT_USER:-minioadmin}" \
     MINIO_SECRET_KEY="${MINIO_ROOT_PASSWORD:-minioadmin}" \
-    MODELSERVER_SERVICE_TOKEN="$(vault token create -address="$VAULT_ADDR" -field=token -policy=default -ttl=87600h 2>/dev/null || cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
-    GUARDRAILS_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)"
+    MODELSERVER_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
+    GUARDRAILS_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
+    JWT_SECRET="$(cat /dev/urandom | head -c 48 | base64 | tr -d '=+/' | head -c 64)"
 
   echo "[vault-init] Secrets written."
 fi

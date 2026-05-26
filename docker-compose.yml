@@ -148,6 +148,19 @@ services:
       timeout: 5s
       retries: 10
 
+  seed:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    env_file: .env
+    environment:
+      VAULT_ADDR: http://vault:8200
+    depends_on:
+      api:
+        condition: service_healthy
+    entrypoint: ["sh", "-c", "python -m seeds.marios_pizza && python -m seeds.lawson_partners"]
+    restart: "no"
+
   admin:
     build:
       context: ./admin
