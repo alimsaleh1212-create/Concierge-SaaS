@@ -1,0 +1,5 @@
+# Agent tool-selection golden set
+# 15 examples: {message, expected_tool, expected_no_tool}
+# Hand-label at least 3 examples before running evals (T-B035)
+# expected_tool: one of rag_search | capture_lead | escalate | null
+examples: []

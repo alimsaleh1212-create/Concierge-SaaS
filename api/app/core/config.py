@@ -1,23 +1,30 @@
+import logging
+
 import hvac
 from functools import lru_cache
 from pydantic_settings import BaseSettings
 
+logger = logging.getLogger(__name__)
+
 
 class Settings(BaseSettings):
+    # Set DEV_MODE=true in .env to skip Vault entirely (local dev only)
+    DEV_MODE: bool = False
+
     # Supplied by user via .env — everything else comes from Vault
     VAULT_ADDR: str = "http://vault:8200"
-    VAULT_ROOT_TOKEN: str
-    ANTHROPIC_API_KEY: str
-    VOYAGE_API_KEY: str
+    VAULT_ROOT_TOKEN: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    VOYAGE_API_KEY: str = ""
 
-    # Populated from Vault at startup — defaults are empty; will raise if Vault unreachable
+    # Populated from Vault at startup (or from .env when DEV_MODE=true)
     DATABASE_URL: str = ""
     REDIS_URL: str = ""
     MINIO_ENDPOINT: str = ""
     MINIO_ACCESS_KEY: str = ""
     MINIO_SECRET_KEY: str = ""
-    MODELSERVER_SERVICE_TOKEN: str = ""
-    GUARDRAILS_SERVICE_TOKEN: str = ""
+    MODELSERVER_SERVICE_TOKEN: str = "dev-modelserver-token"
+    GUARDRAILS_SERVICE_TOKEN: str = "dev-guardrails-token"
     JWT_SECRET: str = ""
 
     class Config:
@@ -28,7 +35,10 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     settings = Settings()  # type: ignore[call-arg]
-    _load_vault_secrets(settings)
+    if settings.DEV_MODE:
+        logger.warning("DEV_MODE=true — Vault skipped, reading secrets from .env")
+    else:
+        _load_vault_secrets(settings)
     return settings
 
 

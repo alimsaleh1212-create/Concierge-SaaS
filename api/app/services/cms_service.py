@@ -2,9 +2,10 @@ import uuid
 from typing import Any
 
 from fastapi import BackgroundTasks
-from sqlalchemy import delete
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.database import AsyncSessionLocal
 from app.models.cms_content import CmsContent
 from app.models.embedding import Embedding
 from app.repositories.cms_repo import CmsRepository
@@ -58,6 +59,15 @@ async def soft_delete_content(
 
 
 async def _ingest_embeddings(content_id: uuid.UUID, tenant_id: uuid.UUID) -> None:
-    """Fire-and-forget background task — Owner B implements the real embedder.
-    This stub is a placeholder so the CMS routes can call it safely."""
-    pass
+    """Fire-and-forget background task: chunk, embed, and upsert vectors for a content item."""
+    from app.rag.ingester import ingest_content
+
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(
+            select(CmsContent).where(CmsContent.id == content_id, CmsContent.is_deleted == False)  # noqa: E712
+        )
+        content = result.scalar_one_or_none()
+        if content is None:
+            return
+        await ingest_content(content_id, tenant_id, content.body, session)
+        await session.commit()

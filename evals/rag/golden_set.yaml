@@ -1,0 +1,133 @@
+# RAG golden set — 15 triples
+# Format: question + ideal_answer + ground_truth_chunks (child chunk text the retriever must surface)
+# tenant: matches seed slug (novatech-electronics | learnsphere)
+# hand_labelled: true marks the 3 triples written without looking at the CMS first (RAGAS requirement)
+
+triples:
+
+  # ── NovaTech Electronics (8 triples) ────────────────────────────────────────
+
+  - tenant: novatech-electronics
+    hand_labelled: true
+    question: "Is shipping free?"
+    ideal_answer: >
+      Standard shipping is free on orders over $50 and takes 3–5 business days.
+      Express shipping is available for $9.99 if you need it faster.
+    ground_truth_chunks:
+      - "Standard shipping is free on orders over $50 and takes 3–5 business days. Express shipping (1–2 business days) is available for $9.99."
+
+  - tenant: novatech-electronics
+    hand_labelled: true
+    question: "Do you ship to other countries?"
+    ideal_answer: >
+      Yes, NovaTech ships internationally to 30+ countries.
+      Shipping rates are calculated at checkout.
+    ground_truth_chunks:
+      - "Same-day delivery is available in select metro areas for orders placed before 12pm. International shipping is available to 30+ countries — rates calculated at checkout."
+
+  - tenant: novatech-electronics
+    hand_labelled: true
+    question: "How do I return something I bought?"
+    ideal_answer: >
+      Go to your order history and click 'Return Item'.
+      Refunds are processed within 5–7 business days after NovaTech receives the item.
+    ground_truth_chunks:
+      - "To start a return, visit your order history and click 'Return Item'. Refunds are processed within 5–7 business days after we receive the item."
+
+  - tenant: novatech-electronics
+    question: "How long do I have to return a product?"
+    ideal_answer: >
+      You have 30 days from delivery to return most items in their original condition.
+      Note that opened software, digital downloads, and personalised items cannot be returned.
+    ground_truth_chunks:
+      - "We accept returns within 30 days of delivery for most items in original condition. Opened software, digital downloads, and personalised items are non-returnable."
+
+  - tenant: novatech-electronics
+    question: "Can I buy an extended warranty?"
+    ideal_answer: >
+      Yes, extended warranty plans covering 1–3 years are available at checkout for most product categories.
+    ground_truth_chunks:
+      - "All products sold by NovaTech include the manufacturer's warranty. Extended warranty plans (1–3 years) are available at checkout for most categories."
+
+  - tenant: novatech-electronics
+    question: "How do I get my device repaired?"
+    ideal_answer: >
+      Contact NovaTech support at support@novatech.example.com or call 1-800-668-2832.
+      They partner with authorised service centres in 50+ cities.
+    ground_truth_chunks:
+      - "For repairs, contact our support team at support@novatech.example.com or call 1-800-668-2832. We partner with authorised service centres in 50+ cities."
+
+  - tenant: novatech-electronics
+    question: "What payment methods do you accept?"
+    ideal_answer: >
+      NovaTech accepts Visa, Mastercard, American Express, PayPal, Apple Pay, and Google Pay.
+      Buy Now Pay Later via Klarna is also available (0% interest for 3 months on orders over $200).
+    ground_truth_chunks:
+      - "We accept Visa, Mastercard, American Express, PayPal, Apple Pay, and Google Pay. Buy Now Pay Later is available via Klarna (0% interest for 3 months on orders over $200)."
+
+  - tenant: novatech-electronics
+    question: "Do you sell headphones or audio equipment?"
+    ideal_answer: >
+      Yes, NovaTech carries a range of audio products including noise-cancelling headphones,
+      earbuds, soundbars, and hi-fi speakers.
+    ground_truth_chunks:
+      - "Audio: Noise-cancelling headphones, earbuds, soundbars, and hi-fi speakers. Smart Home: Smart speakers, security cameras, robot vacuums, and lighting."
+
+  # ── LearnSphere (7 triples) ──────────────────────────────────────────────────
+
+  - tenant: learnsphere
+    question: "How much does a monthly subscription cost?"
+    ideal_answer: >
+      The Individual Monthly Plan costs $19.99/month and includes full access to all courses
+      and certificates. An annual plan is available for $149/year, saving 38%.
+    ground_truth_chunks:
+      - "Individual Monthly Plan: $19.99/month — full access to all courses, certificates included. Individual Annual Plan: $149/year (save 38%) — same benefits billed yearly."
+
+  - tenant: learnsphere
+    question: "Is there a free trial?"
+    ideal_answer: >
+      Yes, all LearnSphere plans include a 7-day free trial and no credit card is required to start.
+    ground_truth_chunks:
+      - "All plans include a 7-day free trial. No credit card required to start the trial."
+
+  - tenant: learnsphere
+    question: "Can I get a refund if I cancel my annual plan?"
+    ideal_answer: >
+      Annual subscribers can request a prorated refund within 30 days of purchase.
+      After 30 days the plan is non-refundable, but you keep access for the full year.
+    ground_truth_chunks:
+      - "Annual subscribers can request a prorated refund within 30 days of purchase. After 30 days, annual plans are non-refundable but you keep access for the full year."
+
+  - tenant: learnsphere
+    question: "What score do I need to pass a course and earn a certificate?"
+    ideal_answer: >
+      You need to complete all lessons and pass the final assessment with at least 70%
+      to earn a LearnSphere certificate.
+    ground_truth_chunks:
+      - "LearnSphere certificates are awarded upon completing all lessons and passing the final assessment (70% pass mark). Certificates include your name, course title, completion date, and a unique verification URL."
+
+  - tenant: learnsphere
+    question: "Do certificates expire?"
+    ideal_answer: >
+      No, LearnSphere certificates never expire and remain accessible even after you cancel
+      your subscription. They can also be shared to LinkedIn or downloaded as a PDF.
+    ground_truth_chunks:
+      - "They can be shared directly to LinkedIn or downloaded as a PDF. Certificates do not expire and remain accessible even after cancelling your subscription."
+
+  - tenant: learnsphere
+    question: "Is there a mobile app?"
+    ideal_answer: >
+      Yes, the LearnSphere mobile app is available on iOS 15+ and Android 10+.
+      You can download up to 30 videos for offline viewing.
+    ground_truth_chunks:
+      - "Our mobile app is available on iOS 15+ and Android 10+. Minimum internet speed recommended: 5 Mbps for HD video, 1 Mbps for standard quality."
+      - "Videos can be downloaded for offline viewing on mobile (up to 30 videos at a time)."
+
+  - tenant: learnsphere
+    question: "What subjects can I learn on LearnSphere?"
+    ideal_answer: >
+      LearnSphere covers technology (Python, AWS, machine learning), business, design (UI/UX, Figma),
+      and data science (SQL, Tableau). New courses are added weekly and learners can request topics.
+    ground_truth_chunks:
+      - "Technology: Python, JavaScript, AWS, machine learning, cybersecurity, and web development. Business: Project management, entrepreneurship, finance, and marketing."
+      - "Design: UI/UX, Figma, Photoshop, motion graphics, and brand identity. Data Science: SQL, pandas, Tableau, statistics, and AI fundamentals."
