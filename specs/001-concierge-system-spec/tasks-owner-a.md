@@ -24,12 +24,13 @@ description: "Task list — Owner A: Platform, Tenancy & Infrastructure"
 **Purpose**: Create the project configuration layer, Docker Compose stack, and Vault wiring
 so every other owner can pull and start services without manual environment setup.
 
-- [ ] T-A001 [P] Create `api/requirements.txt` with pinned versions: fastapi==0.115.*, sqlalchemy==2.x, alembic, fastapi-users[sqlalchemy]>=14, pyjwt, anthropic, voyageai, redis, minio, hvac, presidio-analyzer, presidio-anonymizer, asyncpg, pgvector
-- [ ] T-A002 [P] Create `api/app/core/config.py`: Pydantic Settings class that reads all secrets from Vault (via hvac); expose `DATABASE_URL`, `REDIS_URL`, `MINIO_ENDPOINT`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `MODELSERVER_SERVICE_TOKEN`, `GUARDRAILS_SERVICE_TOKEN`
-- [ ] T-A003 [P] Create `.env.example` with the three user-supplied values (`VAULT_ROOT_TOKEN`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`) and comments explaining all other secrets are Vault-managed
-- [ ] T-A004 Create `docker-compose.yml` with services: `api` (port 8000), `modelserver` (port 8001), `guardrails` (port 8002), `admin` (port 8501), `postgres` (port 5432, pgvector image), `redis` (port 6379), `minio` (ports 9000/9001), `vault` (port 8200) — healthchecks on all services; api depends_on postgres, redis, minio, vault
+- [x] T-A001 [P] Create `api/pyproject.toml` (uv) with pinned versions: fastapi==0.115.*, sqlalchemy==2.x, alembic, fastapi-users[sqlalchemy]>=14, pyjwt, anthropic, voyageai, redis, minio, hvac, presidio-analyzer, presidio-anonymizer, asyncpg, pgvector
+- [x] T-A002 [P] Create `api/app/core/config.py`: Pydantic Settings class that reads all secrets from Vault (via hvac); expose `DATABASE_URL`, `REDIS_URL`, `MINIO_ENDPOINT`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`, `MODELSERVER_SERVICE_TOKEN`, `GUARDRAILS_SERVICE_TOKEN`
+- [x] T-A003 [P] Create `.env.example` with the three user-supplied values (`VAULT_ROOT_TOKEN`, `ANTHROPIC_API_KEY`, `VOYAGE_API_KEY`) and comments explaining all other secrets are Vault-managed
+- [x] T-A004 Create `docker-compose.yml` with services: `api` (port 8000), `modelserver` (port 8001), `guardrails` (port 8002), `admin` (port 8501), `postgres` (port 5432, pgvector image), `redis` (port 6379), `minio` (ports 9000/9001), `vault` (port 8200, dev mode) — healthchecks on all services; api depends_on postgres, redis, minio, vault
+- [x] T-A004a Create `vault/init.sh`: shell script that runs on `docker compose up` via a one-shot `vault-init` service; writes all required secrets to Vault dev instance: `DATABASE_URL`, `REDIS_URL`, `MINIO_ENDPOINT`, `MINIO_ACCESS_KEY`, `MINIO_SECRET_KEY`, `MODELSERVER_SERVICE_TOKEN`, `GUARDRAILS_SERVICE_TOKEN`; creates MinIO buckets `concierge-widget` and `concierge-cms`; script is idempotent (skips if secrets already exist); exits 0 when complete
 
-**Checkpoint**: `docker compose up --build` starts all services; `curl localhost:8000/health` returns `{"status":"ok"}`.
+**Checkpoint**: `docker compose up --build` starts all services with zero manual steps; Vault auto-unsealed; `curl localhost:8000/health` returns `{"status":"ok"}`.
 
 ---
 
@@ -40,16 +41,16 @@ Every other owner waits on this phase before touching the database.
 
 **⚠️ CRITICAL**: All user story phases depend on this completing first.
 
-- [ ] T-A005 Create `api/app/core/database.py`: async SQLAlchemy engine (asyncpg driver), `AsyncSession` factory, `get_db` FastAPI dependency that sets `app.tenant_id` via `set_config` before yield and resets it in a `finally` block on every request regardless of exception
-- [ ] T-A006 Create `api/app/core/security.py`: `verify_admin_token(token) -> TokenClaims` (fastapi-users JWT), `verify_widget_token(token) -> WidgetTokenClaims`, `verify_service_token(token)` — all raise HTTP 401 on invalid; `verify_widget_token` raises HTTP 403 if `tenant_id` in request body mismatches JWT claim
-- [ ] T-A007 Create all 9 SQLAlchemy ORM models with exact schema from `data-model.md` — UUID PKs, `tenant_id` on every scoped table, `is_deleted`, `created_at`/`updated_at`, `VECTOR(1024)` on embeddings — in `api/app/models/` (one file per model: `tenant.py`, `user.py`, `widget.py`, `cms_content.py`, `conversation.py`, `message.py`, `lead.py`, `embedding.py`, `audit_log.py`)
-- [ ] T-A008 Create `api/alembic/env.py` with async Alembic setup pointing at `DATABASE_URL` from config; import all models so autogenerate picks up every table
-- [ ] T-A009 Create `api/alembic/versions/001_baseline.py`: single migration that creates all 5 Postgres enums, all 9 tables with exact columns, all indexes, `updated_at` trigger on 8 tables, all RLS policies (`ENABLE ROW LEVEL SECURITY` + `CREATE POLICY tenant_isolation`) for the 7 tenant-scoped tables — `audit_log` and `tenants` get no RLS
-- [ ] T-A010 Create `api/app/repositories/base.py`: `BaseRepository(model, session)` with `.all(tenant_id)`, `.get(id, tenant_id)`, `.create(data)`, `.update(id, data, tenant_id)`, `.soft_delete(id, tenant_id)` — every query scoped with `.filter(model.tenant_id == tenant_id)`
-- [ ] T-A011 [P] Create `api/app/repositories/tenant_repo.py`: `TenantRepository` inheriting `BaseRepository` — NOT scoped by tenant_id (platform table); add `get_by_slug(slug)`, `list_active()`, `suspend(id)`, `hard_delete(id)`
-- [ ] T-A012 [P] Create `api/app/repositories/cms_repo.py`: `CmsRepository` inheriting `BaseRepository`; add `list_active(tenant_id)` (excludes `is_deleted=true`), `get_with_embeddings(id, tenant_id)`
-- [ ] T-A013 [P] Create `api/app/repositories/conversation_repo.py`: `ConversationRepository` inheriting `BaseRepository`; add `get_by_session(session_id, tenant_id)`, `set_escalated(id, tenant_id)`, `set_closed(id, tenant_id)`
-- [ ] T-A014 [P] Create `api/app/repositories/lead_repo.py`: `LeadRepository` inheriting `BaseRepository`; add `list_by_status(tenant_id, status)`, `update_status(id, status, tenant_id)`
+- [x] T-A005 Create `api/app/core/database.py`: async SQLAlchemy engine (asyncpg driver), `AsyncSession` factory, `get_db` FastAPI dependency that sets `app.tenant_id` via `set_config` before yield and resets it in a `finally` block on every request regardless of exception
+- [x] T-A006 Create `api/app/core/security.py`: `verify_admin_token(token) -> TokenClaims` (fastapi-users JWT), `verify_widget_token(token) -> WidgetTokenClaims`, `verify_service_token(token)` — all raise HTTP 401 on invalid; `verify_widget_token` raises HTTP 403 if `tenant_id` in request body mismatches JWT claim
+- [x] T-A007 Create all 9 SQLAlchemy ORM models with exact schema from `data-model.md` — UUID PKs, `tenant_id` on every scoped table, `is_deleted`, `created_at`/`updated_at`, `VECTOR(1024)` on embeddings — in `api/app/models/` (one file per model: `tenant.py`, `user.py`, `widget.py`, `cms_content.py`, `conversation.py`, `message.py`, `lead.py`, `embedding.py`, `audit_log.py`)
+- [x] T-A008 Create `api/alembic/env.py` with async Alembic setup pointing at `DATABASE_URL` from config; import all models so autogenerate picks up every table
+- [x] T-A009 Create `api/alembic/versions/001_baseline.py`: single migration that creates all 5 Postgres enums, all 9 tables with exact columns, all indexes, `updated_at` trigger on 8 tables, all RLS policies (`ENABLE ROW LEVEL SECURITY` + `CREATE POLICY tenant_isolation`) for the 7 tenant-scoped tables — `audit_log` and `tenants` get no RLS
+- [x] T-A010 Create `api/app/repositories/base.py`: `BaseRepository(model, session)` with `.all(tenant_id)`, `.get(id, tenant_id)`, `.create(data)`, `.update(id, data, tenant_id)`, `.soft_delete(id, tenant_id)` — every query scoped with `.filter(model.tenant_id == tenant_id)`
+- [x] T-A011 [P] Create `api/app/repositories/tenant_repo.py`: `TenantRepository` inheriting `BaseRepository` — NOT scoped by tenant_id (platform table); add `get_by_slug(slug)`, `list_active()`, `suspend(id)`, `hard_delete(id)`
+- [x] T-A012 [P] Create `api/app/repositories/cms_repo.py`: `CmsRepository` inheriting `BaseRepository`; add `list_active(tenant_id)` (excludes `is_deleted=true`), `get_with_embeddings(id, tenant_id)`
+- [x] T-A013 [P] Create `api/app/repositories/conversation_repo.py`: `ConversationRepository` inheriting `BaseRepository`; add `get_by_session(session_id, tenant_id)`, `set_escalated(id, tenant_id)`, `set_closed(id, tenant_id)`
+- [x] T-A014 [P] Create `api/app/repositories/lead_repo.py`: `LeadRepository` inheriting `BaseRepository`; add `list_by_status(tenant_id, status)`, `update_status(id, status, tenant_id)`
 
 **Checkpoint**: Run `alembic upgrade head` — zero errors; all 9 tables and RLS policies present in `psql \dt` and `\d cms_content` output.
 
@@ -126,7 +127,7 @@ work end-to-end from first `docker compose up`.
 
 **Purpose**: Per-tenant rate limiting, `GET /health` endpoint, and Alembic baseline cleanup.
 
-- [ ] T-A031 Implement per-tenant rate-limiting middleware using the chosen library (document in DECISIONS.md D-006): apply to all `/chat/messages` requests; key by `tenant_id` from JWT; placeholder thresholds — Owner A sets real values after Tuesday eval run and records in DECISIONS.md
+- [ ] T-A031 Implement per-tenant rate-limiting middleware using Redis token bucket (`redis-py`, already a dep — see DECISIONS.md D-006): apply to all `/chat/messages` requests; key by `tenant_id` from JWT; placeholder thresholds — Owner A sets real values after Tuesday eval run and records in DECISIONS.md
 - [ ] T-A032 [P] Create `GET /health` endpoint returning `{"status":"ok","version":"0.1.0"}` — no auth required — in `api/app/api/__init__.py` or `api/main.py`
 - [ ] T-A033 [P] Create `api/main.py`: FastAPI app factory; include all routers (`platform`, `admin`, `chat`, `auth`); mount Prometheus metrics at `/metrics`; register RLS event listener on app startup
 - [ ] T-A034 [P] Create `api/Dockerfile`: multi-stage build, no torch, final image based on `python:3.12-slim`; copy only `app/` and `requirements.txt`; run `alembic upgrade head` as entrypoint pre-hook; target < 500 MB
