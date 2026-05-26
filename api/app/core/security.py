@@ -1,20 +1,23 @@
 from dataclasses import dataclass
 
+import bcrypt
 import jwt
 from fastapi import HTTPException, status
-from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# bcrypt hard-limits passwords to 72 bytes — encode + truncate explicitly
+_BCRYPT_MAX = 72
 
 
 def get_password_hash(password: str) -> str:
-    return _pwd_context.hash(password)
+    secret = password.encode("utf-8")[:_BCRYPT_MAX]
+    return bcrypt.hashpw(secret, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    secret = plain.encode("utf-8")[:_BCRYPT_MAX]
+    return bcrypt.checkpw(secret, hashed.encode("utf-8"))
 
 
 @dataclass

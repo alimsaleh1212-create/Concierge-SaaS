@@ -20,14 +20,18 @@ import datetime
 import sys
 import os
 
-# Run from api/ so imports resolve correctly
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Locate api/ directory regardless of where the script is invoked from
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))   # api/scripts/
+_API_DIR = os.path.dirname(_SCRIPT_DIR)                    # api/
+if _API_DIR not in sys.path:
+    sys.path.insert(0, _API_DIR)
 
 import jwt
 from sqlalchemy import text, select
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
+get_settings.cache_clear()  # ensure fresh read of .env, not a stale cached instance
 from app.core.database import AsyncSessionLocal, Base
 from app.models import *  # noqa: F401,F403 — registers all ORM models with Base
 from app.models.tenant import Tenant
@@ -39,7 +43,7 @@ async def create_tables() -> None:
     engine = create_async_engine(settings.DATABASE_URL, echo=False)
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-        await Base.metadata.create_all(conn)
+        await conn.run_sync(Base.metadata.create_all)
     await engine.dispose()
     print("[setup] Tables created (idempotent)")
 

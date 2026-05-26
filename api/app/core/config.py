@@ -1,10 +1,16 @@
 import logging
+import os
 
 import hvac
 from functools import lru_cache
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
+
+# config.py lives at api/app/core/config.py — walk up three levels to reach repo root
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_REPO_ROOT = os.path.normpath(os.path.join(_HERE, "..", "..", ".."))
+_ENV_FILE = os.path.join(_REPO_ROOT, ".env")
 
 
 class Settings(BaseSettings):
@@ -28,7 +34,7 @@ class Settings(BaseSettings):
     JWT_SECRET: str = ""
 
     class Config:
-        env_file = ".env"
+        env_file = _ENV_FILE
         extra = "ignore"
 
 
