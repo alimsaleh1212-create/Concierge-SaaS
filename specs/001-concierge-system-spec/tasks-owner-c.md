@@ -29,11 +29,9 @@ all stub files Owner C owns from day one.
 - [ ] T-C002 [P] Create `notebooks/train_classical.ipynb`: offline notebook for TF-IDF + logistic regression training; exports `model.joblib`; records macro-F1 on held-out test set
 - [ ] T-C003 [P] Create `notebooks/train_dl.ipynb`: offline notebook for small DL model training (Colab-compatible, with torch); exports ONNX artifact; NO torch imports in any container image
 - [ ] T-C004 [P] Create `evals/classifier/test_set.csv` with columns `text,label` using a representative sample from the chosen dataset (at least 50 rows covering sales/support/spam)
-- [ ] T-C005 [P] Create `modelserver/requirements.txt` with ONLY: `fastapi`, `uvicorn`, `onnxruntime`, `scikit-learn`, `numpy`, `pyjwt`, `httpx` — NO torch, NO transformers
 - [ ] T-C006 [P] Create `guardrails/requirements.txt` with: `fastapi`, `uvicorn`, `nemo-guardrails`, `presidio-analyzer`, `presidio-anonymizer`, `pyjwt`, `httpx`
 
-**Checkpoint**: Dataset chosen and announced. Notebook stubs committed. requirements.txt files confirm no torch dependency.
-
+**Checkpoint**: Dataset chosen and announced. Notebook stubs committed. Dependency files confirm no torch dependency.
 ---
 
 ## Phase 2: Foundational (Modelserver Build)
@@ -44,12 +42,12 @@ all stub files Owner C owns from day one.
 the modelserver container passes its healthcheck.
 - [ ] T-C005 [P] Create `modelserver/pyproject.toml` with uv-managed dependencies ONLY: `fastapi`, `uvicorn`, `scikit-learn`, `joblib`, `numpy`, `pyjwt`, `httpx` — NO torch, NO transformers, NO onnxruntime needed for the shipped Logistic Regression model
 - [ ] T-C005a [P] Commit `modelserver/uv.lock` for reproducible modelserver builds
-- [ ] T-C007 Train the TF-IDF + logistic regression model using `notebooks/train_classical.ipynb`; export as `model.joblib` to `modelserver/artifacts/`; record macro-F1 in `model_card.md`
+- [ ] T-C007 Train the TF-IDF + logistic regression model using `notebooks/train_classical.ipynb`; export as `model.joblib` to `modelserver/artifacts/`; record macro-F1 in `modelserver/artifacts/model_card.md` and `modelserver/model_card.md`
 - [ ] T-C008 Train/evaluate the small DL model using `notebooks/train_dl.ipynb` in Colab only; record DL macro-F1 in `modelserver/model_card.md`; do NOT serve this model in the modelserver because Logistic Regression is the chosen production artifact
 - [ ] T-C009 Run LLM zero-shot baseline using Groq API on `evals/classifier/test_set.csv`; record macro-F1 in `modelserver/model_card.md` — no artifact exported
-- [ ] T-C010 Record the production deployment choice in `model_card.md` Deployment Choice section: ship the TF-IDF + logistic regression `model.joblib` artifact because it gives strong macro-F1 with lower latency, smaller container size, simpler serving, and no torch/transformers dependency
-- [ ] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/model.joblib`; record in `model_card.md` Artifact SHA-256 section
-- [ ] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `modelserver/artifacts/model_card.md`; compute actual SHA-256 of `modelserver/artifacts/model.joblib`; call `sys.exit(1)` with a clear message if they do not match.
+- [ ] T-C010 Record the production deployment choice in `modelserver/model_card.md` Deployment Choice section: ship the TF-IDF + logistic regression `model.joblib` artifact because it gives strong macro-F1 with lower latency, smaller container size, simpler serving, and no torch/transformers/onnxruntime dependency
+- [ ] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/model.joblib`; record in `modelserver/artifacts/model_card.md` Artifact SHA-256 section
+- [ ] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `modelserver/artifacts/model_card.md`; compute actual SHA-256 of `modelserver/artifacts/model.joblib`; call `sys.exit(1)` with a clear message if they do not match; this verification MUST run during modelserver startup.
 - [ ] T-C013 Create `modelserver/app/classifier.py`: load the chosen sklearn joblib artifact `model.joblib`; expose `predict(text: str) -> tuple[str, float]` returning (label, confidence); no torch, transformers, or onnxruntime import anywhere
 - [ ] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` that validates the service JWT from Vault, calls `classifier.predict`, and returns `{"label":str,"confidence":float}`; add `GET /health` returning model type `logistic_regression` and artifact SHA-256; call startup SHA-256 verification on app lifespan start
 - [ ] T-C015 Create `modelserver/Dockerfile`: multi-stage uv-based build; base `python:3.12-slim`; copy only `app/`, `pyproject.toml`, `uv.lock`, `artifacts/`; verify no torch, transformers, or onnxruntime in final layer; target < 500 MB total image
@@ -220,8 +218,8 @@ T-C018 tenant_rails.py      ─┘
   `modelserver/artifacts/model.joblib` and verifying the container exits.
 - torch and transformers MUST NOT appear in any container's final image layer. Use
   `docker run --rm <image> pip freeze | grep torch` to verify.
-- Three model results (classical F1, DL/ONNX F1, LLM zero-shot F1) must ALL be committed
-  in `model_card.md` — the graders check all three.
+ - Three model results (classical F1, DL/ONNX F1, LLM zero-shot F1) must ALL be committed
+  in `modelserver/model_card.md` — the graders check all three.
 - Platform rails in `platform_rails.co` are immutable — no tenant configuration may
   override them. Tenant rails are injected at request time from the `tenant_rails` field.
 - Presidio `API_KEY` entity detection requires the English NLP pipeline; add

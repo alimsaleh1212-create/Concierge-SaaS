@@ -1,0 +1,14 @@
+[project]
+name = "concierge-modelserver"
+version = "0.1.0"
+description = "Concierge intent classifier modelserver"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "scikit-learn==1.6.1",
+    "joblib",
+    "numpy",
+    "pyjwt",
+    "httpx",
+]

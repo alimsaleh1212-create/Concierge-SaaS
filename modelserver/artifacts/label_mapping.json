@@ -1,0 +1,22 @@
+{
+  "labels": [
+    "faq",
+    "human_request",
+    "other",
+    "sales_or_leads",
+    "spam",
+    "support"
+  ],
+  "expected_labels": [
+    "faq",
+    "support",
+    "sales_or_leads",
+    "human_request",
+    "spam",
+    "other"
+  ],
+  "response_format": {
+    "label": "string",
+    "confidence": "float"
+  }
+}
