@@ -1,9 +1,9 @@
 import secrets
 import uuid
-from typing import Any, Optional
+from typing import Annotated, Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db, set_tenant_context
@@ -15,23 +15,54 @@ router = APIRouter(prefix="/admin/widgets", tags=["admin"])
 
 _tenant_admin = require_role("tenant_admin")
 
+_TopicStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+_ToneStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+
 
 def _tenant_id(current_user: dict) -> uuid.UUID:
     return uuid.UUID(current_user["tenant_id"])
+
+
+class TenantRailsConfig(BaseModel):
+    """Typed validation for tenant-editable guardrail settings stored in widgets.theme_config."""
+    model_config = ConfigDict(extra="forbid")
+
+    allowed_topics: list[_TopicStr] = Field(default_factory=list, max_length=50)
+    blocked_topics: list[_TopicStr] = Field(default_factory=list, max_length=50)
+    refusal_tone: Optional[_ToneStr] = None
+
+    @field_validator("allowed_topics", "blocked_topics")
+    @classmethod
+    def dedupe(cls, values: list[str]) -> list[str]:
+        seen: set[str] = set()
+        out: list[str] = []
+        for v in values:
+            key = v.casefold()
+            if key not in seen:
+                seen.add(key)
+                out.append(v)
+        return out
+
+
+class ThemeConfig(BaseModel):
+    """Wraps theme_config JSONB. Validates tenant_rails if present; passes other keys through."""
+    model_config = ConfigDict(extra="allow")
+
+    tenant_rails: Optional[TenantRailsConfig] = None
 
 
 class WidgetCreateRequest(BaseModel):
     name: str
     allowed_origins: list[str] = []
     greeting: Optional[str] = None
-    theme_config: dict = {}
+    theme_config: ThemeConfig = Field(default_factory=ThemeConfig)
 
 
 class WidgetUpdateRequest(BaseModel):
     name: Optional[str] = None
     allowed_origins: Optional[list[str]] = None
     greeting: Optional[str] = None
-    theme_config: Optional[dict] = None
+    theme_config: Optional[ThemeConfig] = None
 
 
 def _widget_repo(session: AsyncSession) -> BaseRepository:
@@ -70,7 +101,7 @@ async def create_widget(
         "widget_token_secret": secrets.token_hex(32),  # always generated server-side
         "allowed_origins": body.allowed_origins,
         "greeting": body.greeting,
-        "theme_config": body.theme_config,
+        "theme_config": body.theme_config.model_dump(exclude_none=True),
     })
     await session.commit()
     return {"id": str(widget.id), "name": widget.name}
@@ -86,7 +117,10 @@ async def update_widget(
     tid = _tenant_id(current_user)
     await set_tenant_context(session, tid)
     repo = _widget_repo(session)
-    data = {k: v for k, v in body.model_dump().items() if v is not None}
+    raw = body.model_dump()
+    if raw.get("theme_config") is not None and body.theme_config is not None:
+        raw["theme_config"] = body.theme_config.model_dump(exclude_none=True)
+    data = {k: v for k, v in raw.items() if v is not None}
     widget = await repo.update(widget_id, data, tid)
     if widget is None:
         raise HTTPException(status_code=404, detail="Widget not found")
