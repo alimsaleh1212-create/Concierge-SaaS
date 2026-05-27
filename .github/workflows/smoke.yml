@@ -1,0 +1,67 @@
+name: Smoke Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and start stack
+        run: docker compose up -d --build
+      - name: Wait for healthchecks
+        run: |
+          set -e
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/health >/dev/null \
+              && curl -fsS http://localhost:8001/health >/dev/null \
+              && curl -fsS http://localhost:8002/health >/dev/null; then
+              echo "Services are healthy"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Services failed to become healthy" >&2
+          docker compose ps
+          exit 1
+      - name: Widget token + chat round-trip
+        run: |
+          set -e
+          TOKEN=$(curl -s -X POST http://localhost:8000/auth/login \
+            -d "username=admin@marios.example" \
+            -d "password=pizza123" | jq -r '.access_token')
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Failed to obtain admin token" >&2
+            exit 1
+          fi
+
+          WIDGET_ID=$(curl -s http://localhost:8000/admin/widgets \
+            -H "Authorization: Bearer $TOKEN" | jq -r '.widgets[0].id')
+          if [ -z "$WIDGET_ID" ] || [ "$WIDGET_ID" = "null" ]; then
+            echo "Failed to obtain widget id" >&2
+            exit 1
+          fi
+
+          WIDGET_TOKEN=$(curl -s -X POST http://localhost:8000/auth/widget-token \
+            -H "Content-Type: application/json" \
+            -d "{\"widget_id\": \"$WIDGET_ID\", \"origin\": \"http://localhost:3000\"}" \
+            | jq -r '.token')
+          if [ -z "$WIDGET_TOKEN" ] || [ "$WIDGET_TOKEN" = "null" ]; then
+            echo "Failed to obtain widget token" >&2
+            exit 1
+          fi
+
+          RESPONSE=$(curl -s -X POST http://localhost:8000/chat/messages \
+            -H "Authorization: Bearer $WIDGET_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d '{"conversation_id": "new", "content": "What are your hours?", "session_id": "smoke-test"}')
+          echo "$RESPONSE" | jq -e '.response' >/dev/null
+      - name: Shutdown stack
+        if: always()
+        run: docker compose down

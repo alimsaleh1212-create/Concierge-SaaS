@@ -38,3 +38,8 @@ dist/
 .idea/
 .vscode/
 Thumbs.db
+
+# Speckit metadata
+.specify/init-options.json
+.specify/integration.json
+.specify/integrations/speckit.manifest.json
