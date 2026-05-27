@@ -4,11 +4,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # Supplied by user via .env — everything else comes from Vault
+    # Supplied by user via .env — used only to bootstrap Vault connection
     VAULT_ADDR: str = "http://vault:8200"
     VAULT_ROOT_TOKEN: str
-    ANTHROPIC_API_KEY: str
-    VOYAGE_API_KEY: str
 
     # Populated from Vault at startup — defaults are empty; will raise if Vault unreachable
     DATABASE_URL: str = ""
@@ -19,6 +17,8 @@ class Settings(BaseSettings):
     MODELSERVER_SERVICE_TOKEN: str = ""
     GUARDRAILS_SERVICE_TOKEN: str = ""
     JWT_SECRET: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    VOYAGE_API_KEY: str = ""
 
     class Config:
         env_file = ".env"
@@ -47,3 +47,5 @@ def _load_vault_secrets(settings: Settings) -> None:
     settings.MODELSERVER_SERVICE_TOKEN = data["MODELSERVER_SERVICE_TOKEN"]
     settings.GUARDRAILS_SERVICE_TOKEN = data["GUARDRAILS_SERVICE_TOKEN"]
     settings.JWT_SECRET = data["JWT_SECRET"]
+    settings.ANTHROPIC_API_KEY = data["ANTHROPIC_API_KEY"]
+    settings.VOYAGE_API_KEY = data["VOYAGE_API_KEY"]
