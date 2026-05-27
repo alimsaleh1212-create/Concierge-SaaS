@@ -42,18 +42,19 @@ all stub files Owner C owns from day one.
 
 **⚠️ IMPORTANT**: Owner B depends on `POST /classify` being reachable. Announce when
 the modelserver container passes its healthcheck.
-
+- [ ] T-C005 [P] Create `modelserver/pyproject.toml` with uv-managed dependencies ONLY: `fastapi`, `uvicorn`, `scikit-learn`, `joblib`, `numpy`, `pyjwt`, `httpx` — NO torch, NO transformers, NO onnxruntime needed for the shipped Logistic Regression model
+- [ ] T-C005a [P] Commit `modelserver/uv.lock` for reproducible modelserver builds
 - [ ] T-C007 Train the TF-IDF + logistic regression model using `notebooks/train_classical.ipynb`; export as `model.joblib` to `modelserver/artifacts/`; record macro-F1 in `model_card.md`
-- [ ] T-C008 Train the small DL model using `notebooks/train_dl.ipynb` (Colab); export ONNX artifact to `modelserver/artifacts/`; record macro-F1 in `model_card.md`
-- [ ] T-C009 Run LLM zero-shot baseline (Claude, zero-shot classification prompt) on `evals/classifier/test_set.csv`; record macro-F1 in `model_card.md` — no artifact exported
-- [ ] T-C010 Choose the best artifact (classical or ONNX) based on macro-F1 ≥ 0.70 and container size; record choice + both F1 scores + rationale in `model_card.md` Deployment Choice section
-- [ ] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/<file>`; record in `model_card.md` Artifact SHA-256 section
-- [ ] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `model_card.md` at the configured path; compute actual SHA-256 of artifact file; call `sys.exit(1)` with clear message if they do not match
-- [ ] T-C013 Create `modelserver/app/classifier.py`: load the chosen artifact (ONNX via `onnxruntime.InferenceSession` OR sklearn joblib); expose `predict(text: str) -> tuple[str, float]` returning (label, confidence); no torch import anywhere
-- [ ] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` (validate service JWT from Vault, call `classifier.predict`, return `{"label":str,"confidence":float}`) and `GET /health` (returns model type + artifact SHA-256); call `startup.py` verify on app lifespan start
-- [ ] T-C015 Create `modelserver/Dockerfile`: multi-stage build; base `python:3.12-slim`; copy only `app/`, `requirements.txt`, `artifacts/`; verify no torch in final layer; target < 500 MB total image
+- [ ] T-C008 Train/evaluate the small DL model using `notebooks/train_dl.ipynb` in Colab only; record DL macro-F1 in `modelserver/model_card.md`; do NOT serve this model in the modelserver because Logistic Regression is the chosen production artifact
+- [ ] T-C009 Run LLM zero-shot baseline using Groq API on `evals/classifier/test_set.csv`; record macro-F1 in `modelserver/model_card.md` — no artifact exported
+- [ ] T-C010 Record the production deployment choice in `model_card.md` Deployment Choice section: ship the TF-IDF + logistic regression `model.joblib` artifact because it gives strong macro-F1 with lower latency, smaller container size, simpler serving, and no torch/transformers dependency
+- [ ] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/model.joblib`; record in `model_card.md` Artifact SHA-256 section
+- [ ] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `modelserver/artifacts/model_card.md`; compute actual SHA-256 of `modelserver/artifacts/model.joblib`; call `sys.exit(1)` with a clear message if they do not match.
+- [ ] T-C013 Create `modelserver/app/classifier.py`: load the chosen sklearn joblib artifact `model.joblib`; expose `predict(text: str) -> tuple[str, float]` returning (label, confidence); no torch, transformers, or onnxruntime import anywhere
+- [ ] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` that validates the service JWT from Vault, calls `classifier.predict`, and returns `{"label":str,"confidence":float}`; add `GET /health` returning model type `logistic_regression` and artifact SHA-256; call startup SHA-256 verification on app lifespan start
+- [ ] T-C015 Create `modelserver/Dockerfile`: multi-stage uv-based build; base `python:3.12-slim`; copy only `app/`, `pyproject.toml`, `uv.lock`, `artifacts/`; verify no torch, transformers, or onnxruntime in final layer; target < 500 MB total image
 
-**Checkpoint**: `docker compose up modelserver` → `GET /health` returns `{"status":"ok","model":"classical|onnx"}`. `POST /classify` with service token returns `{label,confidence}`. Announce in team chat.
+**Checkpoint**: `docker compose up modelserver` → `GET /health` returns `{"status":"ok","model":"logistic_regression"}`. `POST /classify` with service token returns `{label,confidence}`. Announce in team chat.
 
 ---
 
@@ -215,8 +216,8 @@ T-C018 tenant_rails.py      ─┘
 ## Notes
 
 - The SHA-256 boot check (T-C012) is a hard constraint — the modelserver MUST exit 1 if
-  the artifact SHA-256 doesn't match `model_card.md`. Test this by deliberately corrupting
-  the artifact and verifying the container exits.
+  the artifact SHA-256 doesn't match `modelserver/artifacts/model_card.md`. Test this by deliberately corrupting
+  `modelserver/artifacts/model.joblib` and verifying the container exits.
 - torch and transformers MUST NOT appear in any container's final image layer. Use
   `docker run --rm <image> pip freeze | grep torch` to verify.
 - Three model results (classical F1, DL/ONNX F1, LLM zero-shot F1) must ALL be committed

@@ -188,12 +188,12 @@ api/                          # FastAPI backend (Owners A, B, C)
 modelserver/                  # Owner C — lean classifier (no torch)
 ├── app/
 │   ├── main.py               # FastAPI app
-│   ├── classifier.py         # Load ONNX or joblib artifact
-│   └── startup.py            # SHA-256 boot check
-├── artifacts/                # ONNX / joblib files (not in git — fetched at build)
-├── model_card.md
-├── requirements.txt          # onnxruntime, scikit-learn, numpy only
-└── Dockerfile
+│   ├── classifier.py         # Load TF-IDF + Logistic Regression joblib artifact
+│   └── startup.py            #  Verify joblib SHA-256 against artifacts/model_card.md at boot
+├── artifacts/                # Joblib model artifact only (not in git — fetched/copied at build)
+├── model_card.md             #Human-facing summary: task, dataset, ML/DL/LLM comparison, final choice
+├── pyproject.toml           # uv-managed dependencies: fastapi, uvicorn, scikit-learn, joblib, numpy
+└── Dockerfile                # Lean modelserver image, no torch, no transformers, no ONNX needed
 
 guardrails/                   # Owner C — NeMo sidecar
 ├── app/
