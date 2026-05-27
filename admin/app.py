@@ -5,7 +5,7 @@ import jwt
 import requests
 import streamlit as st
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:9000")
 
 st.set_page_config(page_title="Concierge Admin", layout="wide")
 
