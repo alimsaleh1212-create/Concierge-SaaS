@@ -1,0 +1,300 @@
+{
+  "task": "Concierge visitor message intent classification",
+  "model_type": "TF-IDF word n-grams + Logistic Regression",
+  "selected_model": "tfidf_word_1_2_logreg_C2",
+  "dataset": {
+    "original_train_rows": 9016,
+    "original_val_rows": 1932,
+    "original_test_rows": 1932,
+    "clean_train_rows": 8967,
+    "clean_val_rows": 1904,
+    "clean_test_rows": 1915,
+    "columns": [
+      "text",
+      "label"
+    ],
+    "labels": [
+      "faq",
+      "support",
+      "sales_or_leads",
+      "human_request",
+      "spam",
+      "other"
+    ],
+    "train_conflicting_texts_removed": 0
+  },
+  "candidate_results": [
+    {
+      "name": "dummy_most_frequent",
+      "train_time_seconds": 0.007910013198852539,
+      "val_accuracy": 0.23529411764705882,
+      "val_macro_f1": 0.06349206349206349,
+      "val_weighted_f1": 0.0896358543417367
+    },
+    {
+      "name": "tfidf_word_1_1_logreg_C1",
+      "train_time_seconds": 5.520265817642212,
+      "val_accuracy": 0.979516806722689,
+      "val_macro_f1": 0.9745336456557112,
+      "val_weighted_f1": 0.9795395146841464
+    },
+    {
+      "name": "tfidf_word_1_2_logreg_C1",
+      "train_time_seconds": 3.9450857639312744,
+      "val_accuracy": 0.9837184873949579,
+      "val_macro_f1": 0.977829444751316,
+      "val_weighted_f1": 0.9837630779183011
+    },
+    {
+      "name": "tfidf_word_1_2_logreg_C2",
+      "train_time_seconds": 1.7515356540679932,
+      "val_accuracy": 0.9847689075630253,
+      "val_macro_f1": 0.9794513518597121,
+      "val_weighted_f1": 0.9848100238827702
+    }
+  ],
+  "validation": {
+    "metrics": {
+      "split": "clean_val",
+      "rows": 1904,
+      "accuracy": 0.9847689075630253,
+      "macro_f1": 0.9794513518597121,
+      "weighted_f1": 0.9848100238827702,
+      "avg_confidence": 0.900265595043182,
+      "median_confidence": 0.9433206335738774,
+      "total_predict_time_seconds": 0.11335587501525879,
+      "avg_latency_ms_per_example": 0.05953564864246785
+    },
+    "classification_report": {
+      "faq": {
+        "precision": 0.9909297052154195,
+        "recall": 0.9842342342342343,
+        "f1-score": 0.9875706214689266,
+        "support": 444.0
+      },
+      "support": {
+        "precision": 0.9844097995545658,
+        "recall": 0.9866071428571429,
+        "f1-score": 0.9855072463768116,
+        "support": 448.0
+      },
+      "sales_or_leads": {
+        "precision": 0.995260663507109,
+        "recall": 0.9905660377358491,
+        "f1-score": 0.9929078014184397,
+        "support": 424.0
+      },
+      "human_request": {
+        "precision": 1.0,
+        "recall": 0.996551724137931,
+        "f1-score": 0.998272884283247,
+        "support": 290.0
+      },
+      "spam": {
+        "precision": 0.9313725490196079,
+        "recall": 0.9895833333333334,
+        "f1-score": 0.9595959595959596,
+        "support": 96.0
+      },
+      "other": {
+        "precision": 0.9552238805970149,
+        "recall": 0.9504950495049505,
+        "f1-score": 0.9528535980148883,
+        "support": 202.0
+      },
+      "accuracy": 0.9847689075630253,
+      "macro avg": {
+        "precision": 0.9761994329822862,
+        "recall": 0.9830062536339068,
+        "f1-score": 0.9794513518597122,
+        "support": 1904.0
+      },
+      "weighted avg": {
+        "precision": 0.9849505720743621,
+        "recall": 0.9847689075630253,
+        "f1-score": 0.9848100238827704,
+        "support": 1904.0
+      }
+    },
+    "confusion_matrix_labels": [
+      "faq",
+      "support",
+      "sales_or_leads",
+      "human_request",
+      "spam",
+      "other"
+    ],
+    "confusion_matrix": [
+      [
+        437,
+        2,
+        0,
+        0,
+        0,
+        5
+      ],
+      [
+        2,
+        442,
+        2,
+        0,
+        0,
+        2
+      ],
+      [
+        0,
+        3,
+        420,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        1,
+        0,
+        289,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        95,
+        1
+      ],
+      [
+        2,
+        1,
+        0,
+        0,
+        7,
+        192
+      ]
+    ]
+  },
+  "test": {
+    "metrics": {
+      "split": "clean_test",
+      "rows": 1915,
+      "accuracy": 0.9848563968668407,
+      "macro_f1": 0.9818286128490734,
+      "weighted_f1": 0.9848561083961894,
+      "avg_confidence": 0.8990327894789286,
+      "median_confidence": 0.9407737632151352,
+      "total_predict_time_seconds": 0.05655717849731445,
+      "avg_latency_ms_per_example": 0.02953377467222687
+    },
+    "classification_report": {
+      "faq": {
+        "precision": 0.9910313901345291,
+        "recall": 0.9910313901345291,
+        "f1-score": 0.9910313901345291,
+        "support": 446.0
+      },
+      "support": {
+        "precision": 0.9841628959276018,
+        "recall": 0.9775280898876404,
+        "f1-score": 0.9808342728297632,
+        "support": 445.0
+      },
+      "sales_or_leads": {
+        "precision": 0.9861431870669746,
+        "recall": 0.9907192575406032,
+        "f1-score": 0.9884259259259259,
+        "support": 431.0
+      },
+      "human_request": {
+        "precision": 1.0,
+        "recall": 0.9965986394557823,
+        "f1-score": 0.9982964224872232,
+        "support": 294.0
+      },
+      "spam": {
+        "precision": 0.9595959595959596,
+        "recall": 0.9895833333333334,
+        "f1-score": 0.9743589743589743,
+        "support": 96.0
+      },
+      "other": {
+        "precision": 0.9603960396039604,
+        "recall": 0.9556650246305419,
+        "f1-score": 0.9580246913580247,
+        "support": 203.0
+      },
+      "accuracy": 0.9848563968668407,
+      "macro avg": {
+        "precision": 0.9802215787215043,
+        "recall": 0.983520955830405,
+        "f1-score": 0.9818286128490734,
+        "support": 1915.0
+      },
+      "weighted avg": {
+        "precision": 0.9848886738770052,
+        "recall": 0.9848563968668407,
+        "f1-score": 0.9848561083961894,
+        "support": 1915.0
+      }
+    },
+    "confusion_matrix_labels": [
+      "faq",
+      "support",
+      "sales_or_leads",
+      "human_request",
+      "spam",
+      "other"
+    ],
+    "confusion_matrix": [
+      [
+        442,
+        1,
+        0,
+        0,
+        0,
+        3
+      ],
+      [
+        3,
+        435,
+        4,
+        0,
+        0,
+        3
+      ],
+      [
+        0,
+        3,
+        427,
+        0,
+        0,
+        1
+      ],
+      [
+        0,
+        0,
+        0,
+        293,
+        1,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0,
+        95,
+        1
+      ],
+      [
+        1,
+        3,
+        2,
+        0,
+        3,
+        194
+      ]
+    ]
+  }
+}
