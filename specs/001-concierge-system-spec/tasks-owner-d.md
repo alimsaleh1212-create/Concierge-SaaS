@@ -124,9 +124,11 @@ return the documented status code.
 
 **Purpose**: Commit required golden set files and run final full-stack validation.
 
-- [ ] T-D025 [P] Verify `evals/agent/golden_set.yaml` exists (Owner B creates it) and `evals/rag/golden_set.yaml` exists (Owner B creates it); if missing, create minimal placeholder files with correct YAML schema so CI golden-set tests do not error on load
-- [ ] T-D026 [P] Verify `tests/red_team/probes.yaml` exists (Owner C creates it); if missing, create minimal placeholder with one probe so the CI red-team gate does not error on load
+- [x] T-D025 [P] Verify `evals/agent/golden_set.yaml` exists (Owner B creates it) and `evals/rag/golden_set.yaml` exists (Owner B creates it); if missing, create minimal placeholder files with correct YAML schema so CI golden-set tests do not error on load
+- [x] T-D026 [P] Verify `tests/red_team/probes.yaml` exists (Owner C creates it); if missing, create minimal placeholder with one probe so the CI red-team gate does not error on load
 - [ ] T-D027 Run complete `quickstart.md` validation: `git clone` to fresh directory → `docker compose up --build` → health checks pass on all 3 services → both demo tenants reachable → widget token exchange works → full chat round-trip completes → `pytest api/tests/evals/ -v` passes → `pytest api/tests/red_team/ -v` passes
+
+**Note**: T-D027 depends on Vault + full Compose stack (secrets seeded, DB migrated, tenants seeded). Defer until Owner A/B/C services and Vault secrets are available.
 
 ---
 
