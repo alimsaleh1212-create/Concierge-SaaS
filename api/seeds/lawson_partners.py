@@ -1,4 +1,4 @@
-"""Idempotent seed for Lawson & Partners demo tenant (DECISIONS.md D-005).
+"""Idempotent seed for LearnSphere demo tenant (Tenant B — online learning platform).
 
 Safe to run multiple times — skips rows that already exist.
 """
@@ -14,55 +14,72 @@ from app.models.cms_content import CmsContent
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.widget import Widget
+from app.rag.ingester import ingest_content
 
-_TENANT_SLUG = "lawson-partners"
-_ADMIN_EMAIL = "admin@lawsonpartners.example.com"
+_TENANT_SLUG = "learnsphere"
+_ADMIN_EMAIL = "admin@learnsphere.example.com"
 
 _CMS_ITEMS = [
     {
-        "title": "Practice Areas",
+        "title": "About LearnSphere",
         "body": (
-            "Lawson & Partners specialises in corporate law, mergers & acquisitions, "
-            "employment law, intellectual property, and real estate transactions. "
-            "Our team of 25 attorneys has over 200 years of combined experience."
+            "LearnSphere is an online learning subscription platform offering unlimited access "
+            "to over 5,000 courses across technology, business, design, data science, and personal development. "
+            "Courses are taught by industry experts and include video lessons, quizzes, projects, and certificates. "
+            "Learners can study at their own pace from any device."
         ),
         "content_type": "page",
     },
     {
-        "title": "Our Team",
+        "title": "Subscription Plans",
         "body": (
-            "Our founding partners are Sarah Lawson (Corporate, M&A) and James Lawson (Employment, IP). "
-            "Senior associates include Maria Chen (Real Estate), David Patel (Litigation), "
-            "and Anya Kowalski (Contracts). All attorneys are bar-certified in the state of New York."
+            "Individual Monthly Plan: $19.99/month — full access to all courses, certificates included. "
+            "Individual Annual Plan: $149/year (save 38%) — same benefits billed yearly. "
+            "Teams Plan: $12/user/month (minimum 5 users) — admin dashboard, progress tracking, and custom learning paths. "
+            "All plans include a 7-day free trial. No credit card required to start the trial."
         ),
-        "content_type": "page",
+        "content_type": "product",
     },
     {
-        "title": "Consultation FAQ",
+        "title": "Cancellation & Refund Policy",
         "body": (
-            "How do I book a consultation? Call (212) 555-0100 or use our online booking form. "
-            "Initial consultations are 30 minutes and are free of charge. "
-            "Bring any relevant documents or contracts to your first meeting."
+            "You can cancel your subscription at any time from your account settings. "
+            "Monthly subscribers retain access until the end of the current billing period. "
+            "Annual subscribers can request a prorated refund within 30 days of purchase. "
+            "After 30 days, annual plans are non-refundable but you keep access for the full year."
         ),
         "content_type": "faq",
     },
     {
-        "title": "Fees & Billing",
+        "title": "Course Certificates",
         "body": (
-            "We offer hourly billing ($350–$650/hr depending on attorney), fixed-fee packages "
-            "for standard contracts and incorporations, and contingency arrangements for select "
-            "litigation matters. All estimates provided in writing before engagement."
+            "LearnSphere certificates are awarded upon completing all lessons and passing the final assessment (70% pass mark). "
+            "Certificates include your name, course title, completion date, and a unique verification URL. "
+            "They can be shared directly to LinkedIn or downloaded as a PDF. "
+            "Certificates do not expire and remain accessible even after cancelling your subscription."
         ),
         "content_type": "faq",
     },
     {
-        "title": "Contact & Office",
+        "title": "Technical Requirements",
         "body": (
-            "Office: 500 Fifth Avenue, Suite 1800, New York, NY 10110. "
-            "Hours: Monday–Friday 9am–6pm. "
-            "Email: info@lawsonpartners.example.com. Phone: (212) 555-0100."
+            "LearnSphere works in any modern browser (Chrome, Firefox, Safari, Edge). "
+            "Our mobile app is available on iOS 15+ and Android 10+. "
+            "Minimum internet speed recommended: 5 Mbps for HD video, 1 Mbps for standard quality. "
+            "Videos can be downloaded for offline viewing on mobile (up to 30 videos at a time)."
         ),
-        "content_type": "page",
+        "content_type": "faq",
+    },
+    {
+        "title": "Popular Course Categories",
+        "body": (
+            "Technology: Python, JavaScript, AWS, machine learning, cybersecurity, and web development. "
+            "Business: Project management, entrepreneurship, finance, and marketing. "
+            "Design: UI/UX, Figma, Photoshop, motion graphics, and brand identity. "
+            "Data Science: SQL, pandas, Tableau, statistics, and AI fundamentals. "
+            "New courses are added weekly. Learners can request topics via the course request form."
+        ),
+        "content_type": "product",
     },
 ]
 
@@ -73,7 +90,7 @@ async def seed(session: AsyncSession) -> None:
 
     if tenant is None:
         tenant = Tenant(
-            name="Lawson & Partners",
+            name="LearnSphere",
             slug=_TENANT_SLUG,
             allowed_origins=["http://localhost:3000"],
         )
@@ -98,26 +115,35 @@ async def seed(session: AsyncSession) -> None:
     if result.scalar_one_or_none() is None:
         session.add(Widget(
             tenant_id=tenant.id,
-            name="Lawson & Partners Chat",
+            name="LearnSphere Support Widget",
             widget_token_secret=secrets.token_hex(32),
             allowed_origins=["http://localhost:3000"],
-            greeting="Welcome to Lawson & Partners. How can we assist you today?",
+            greeting="Hi! Welcome to LearnSphere. How can I help you with your learning journey?",
         ))
         print("[seed] Created widget")
 
     result = await session.execute(
         select(CmsContent).where(CmsContent.tenant_id == tenant.id, CmsContent.is_deleted == False)  # noqa: E712
     )
-    existing_count = len(result.scalars().all())
+    existing_items = result.scalars().all()
+    existing_count = len(existing_items)
     if existing_count == 0:
+        new_items: list[CmsContent] = []
         for item in _CMS_ITEMS:
-            session.add(CmsContent(tenant_id=tenant.id, **item))
+            cms = CmsContent(tenant_id=tenant.id, **item)
+            session.add(cms)
+            new_items.append(cms)
+        await session.flush()
         print(f"[seed] Created {len(_CMS_ITEMS)} CMS items")
+
+        for cms in new_items:
+            chunks_written = await ingest_content(cms.id, tenant.id, cms.body, session)
+            print(f"[seed] Ingested {chunks_written} chunks for '{cms.title}'")
     else:
         print(f"[seed] CMS items already exist ({existing_count}), skipping")
 
     await session.commit()
-    print("[seed] Lawson & Partners seed complete")
+    print("[seed] LearnSphere seed complete")
 
 
 if __name__ == "__main__":

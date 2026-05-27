@@ -39,11 +39,11 @@
 
 - [ ] Classifier dataset (Owner C, Monday 2026-05-25)
 - [ ] Tracing backend choice (Owner D, Monday 2026-05-25)
-- [ ] RAG CI thresholds (Owner B, Tuesday 2026-05-26)
-- [ ] Agent tool-selection CI threshold (Owner B, Wednesday 2026-05-27)
-- [ ] `capture_lead` exact rate-limit numbers (Owner B, Wednesday 2026-05-27)
+- [x] RAG CI thresholds (Owner B, Tuesday 2026-05-26)
+- [x] Agent tool-selection CI threshold (Owner B, Wednesday 2026-05-27)
+- [x] `capture_lead` exact rate-limit numbers (Owner B, Wednesday 2026-05-27)
 - [ ] Per-tenant rate-limiting thresholds (Owner A, Tuesday 2026-05-26)
-- [ ] Redis rolling window size N (Owner B, Wednesday 2026-05-27)
+- [x] Redis rolling window size N (Owner B, Wednesday 2026-05-27)
 
 ## Notes
 
