@@ -19,6 +19,18 @@ _HIGH_CONFIDENCE = 0.75
 _PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 _rag_answer_template: str | None = None
 
+_REQUIRED_PROMPTS = ["system.md", "rag_answer.md", "capture_lead.md", "escalate.md"]
+
+
+def validate_prompts() -> None:
+    """Raise RuntimeError at startup if any required prompt file is missing or empty."""
+    for name in _REQUIRED_PROMPTS:
+        path = _PROMPTS_DIR / name
+        if not path.exists():
+            raise RuntimeError(f"Required prompt file not found: {path}")
+        if not path.read_text(encoding="utf-8").strip():
+            raise RuntimeError(f"Required prompt file is empty: {path}")
+
 
 def _load_rag_answer() -> str:
     global _rag_answer_template
@@ -89,7 +101,12 @@ async def _lead_workflow(
     session: AsyncSession,
 ) -> AgentResult:
     """Deterministic: ask for contact details and call capture_lead."""
-    capture = CaptureLeadTool(tenant_ctx.tenant_id, tenant_ctx.conversation_id, session)
+    capture = CaptureLeadTool(
+        tenant_ctx.tenant_id,
+        tenant_ctx.conversation_id,
+        session,
+        visitor_ip=tenant_ctx.visitor_ip,
+    )
 
     # Ask Claude to extract details and call the tool
     response = await chat_completion(

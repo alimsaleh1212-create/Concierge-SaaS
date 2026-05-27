@@ -39,6 +39,7 @@ class TenantContext:
     tenant_name: str
     persona: str
     allowed_topics: str
+    visitor_ip: str | None = None
 
 
 @dataclass
@@ -55,7 +56,12 @@ class ToolCallingAgent:
         self.session = session
         self._tools = {
             "rag_search": RagSearchTool(tenant_ctx.tenant_id, session),
-            "capture_lead": CaptureLeadTool(tenant_ctx.tenant_id, tenant_ctx.conversation_id, session),
+            "capture_lead": CaptureLeadTool(
+                tenant_ctx.tenant_id,
+                tenant_ctx.conversation_id,
+                session,
+                visitor_ip=tenant_ctx.visitor_ip,
+            ),
             "escalate": EscalateTool(tenant_ctx.tenant_id, tenant_ctx.conversation_id, session),
         }
 
@@ -95,7 +101,15 @@ class ToolCallingAgent:
                 tenant_id=self.tenant_ctx.tenant_id,
                 conversation_id=self.tenant_ctx.conversation_id,
             )
-            total_output_tokens += response.usage.output_tokens
+            turn_tokens = response.usage.output_tokens
+            total_output_tokens += turn_tokens
+            logger.info(
+                "agent.turn iteration=%d stop_reason=%s turn_tokens=%d total_tokens=%d",
+                iteration,
+                response.stop_reason,
+                turn_tokens,
+                total_output_tokens,
+            )
 
             if response.stop_reason == "end_turn":
                 text_blocks = [b for b in response.content if b.type == "text"]

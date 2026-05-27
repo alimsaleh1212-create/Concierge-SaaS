@@ -14,8 +14,8 @@ Every entry includes the metric used, the alternatives considered, and the resul
 | Per-tenant /chat/messages rate-limit thresholds | 10/min, 30/min, 60/min, 100/min | 60 req/min per tenant; window = 60 s (fixed) | Eval run (2026-05-26) showed p99 load of ~8 req/min per tenant in demo scenarios; 60/min gives 7× headroom for burst; lowering further would block legitimate multi-turn sessions; raising is a DECISIONS.md amendment | D-006a | 2026-05-27 |
 | Tracing backend | OpenTelemetry → Jaeger, OpenTelemetry → Tempo | TODO Owner D — document in this table before day-one coding | Choice affects Docker Compose service count and Grafana stack | D-007 | TODO |
 | Classifier dataset | Any public labeled text-classification set | TODO Owner C — record exact dataset name + file SHA-256 in model_card.md and here | Dataset choice is immutable once training starts | D-008 | TODO |
-| Redis sliding window size N (session memory) | TBD | TODO Owner B — set after design; document here before implementation | Window size affects context quality and Redis memory budget | D-009 | TODO |
-| capture_lead rate-limit numbers | TBD | TODO Owner B — set max leads per session + max per visitor IP per hour | Wrong values allow spam or block legitimate leads | D-010 | TODO |
+| Redis sliding window size N (session memory) | 5, 10, 20, unlimited | N=10 — last 10 messages per conversation | 10 messages cover ~5 turns; enough context for typical visitor sessions without bloating Redis payloads or prompt size | D-009 | 2026-05-27 |
+| capture_lead rate-limit numbers | Various | 3 per session, 5 per visitor IP per hour | 3/session blocks repeated re-submission in one chat; 5/hour per IP prevents scripted spam across sessions while allowing legitimate re-engagement | D-010 | 2026-05-27 |
 | RAG retrieval improvement | Reranking (Voyage rerank-2), query rewriting (Claude) | Reranking — see RAG-001 | Reranking outperformed query rewriting on hit@5 for FAQ-style queries | D-011 | 2026-05-27 |
 
 ---
@@ -24,29 +24,34 @@ Every entry includes the metric used, the alternatives considered, and the resul
 
 **Decision**: Use Voyage `rerank-2` reranking as the active retrieval improvement.
 
-**Approach**: Both candidates were implemented in `api/app/rag/retriever.py` and measured
-on the 15-triple golden set (`evals/rag/golden_set.yaml`) using hit@5.
+**Approach**: All four strategies were implemented in `api/app/rag/retriever.py` and
+measured on the 15-triple golden set (`evals/rag/golden_set.yaml`) using hit@5 and MRR.
 
-| Branch | Strategy | hit@5 |
-|--------|----------|-------|
-| Baseline | cosine search top-5 only | _fill after Phase 6 eval run_ |
-| Reranking (`rerank-2`) | cosine top-15 → rerank → top-5 | _fill after Phase 6 eval run_ |
-| Query rewriting (Claude) | rewrite query → embed → cosine top-5 | _fill after Phase 6 eval run_ |
+| Strategy | Approach | hit@5 | MRR |
+|----------|----------|-------|-----|
+| Baseline | cosine top-5 only | 0.667 | 0.613 |
+| HyDE (Claude) | generate hypothetical answer → embed → cosine top-5 | 0.667 | 0.617 |
+| **Reranking (`rerank-2`)** | cosine top-15 → rerank → top-5 | **0.667** | **0.622** |
+| Query rewriting (Claude) | rewrite query → embed → cosine top-5 | 0.600 | 0.600 |
 
-**Winner**: Reranking.
+All strategies measured 2026-05-27 on the 15-triple golden set.
+Faithfulness (RAGAS-style, 24 synthetic samples): **0.944**.
 
-**Rationale**: Reranking operates on the final candidate pool using a model purpose-built
-for relevance scoring, without introducing noise from query paraphrasing. Query rewriting
-can hurt precision when the original phrasing already matches the indexed text closely,
-which is the common case for short FAQ-style queries against our seed content.
+**Winner**: Reranking (`rerank-2`).
+
+**Rationale**: All strategies except query rewriting tie on hit@5. The MRR gap between
+reranking and baseline (0.622 vs 0.613) is small on 15 samples and not statistically
+significant on its own. Reranking is chosen on architectural grounds: a cross-encoder
+reads the query and each candidate together, which is fundamentally more accurate than
+comparing independent vectors. It also adds no LLM call to the hot path, and its
+advantage grows as the corpus expands. Query rewriting actively hurts precision on
+short FAQ-style queries by broadening them unnecessarily. HyDE adds LLM latency per
+query with no measurable benefit over baseline for this content type.
 
 **Implementation**: `retrieve()` in `api/app/rag/retriever.py` delegates to
-`_retrieve_with_rerank()`. `_retrieve_with_query_rewrite()` is kept in the file for
-reference but is not called. The reranker falls back to cosine order on API failure
+`_retrieve_with_rerank()`. All other strategies are kept in the file for reference
+but are not called. The reranker falls back to cosine order on API failure
 (fail-open, logged as warning).
-
-**Update**: Fill the hit@5 numbers above after running `pytest api/tests/evals/test_rag.py`
-in Phase 6.
 
 ---
 

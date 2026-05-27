@@ -1,5 +1,77 @@
-# Agent tool-selection golden set
-# 15 examples: {message, expected_tool, expected_no_tool}
-# Hand-label at least 3 examples before running evals (T-B035)
-# expected_tool: one of rag_search | capture_lead | escalate | null
-examples: []
+# Agent tool-selection golden set — 15 examples
+#
+# expected_tool: rag_search | capture_lead | escalate | null
+#
+# null means the agent should respond without calling any tool
+# (greetings, small talk, clearly out-of-scope questions).
+#
+# ambiguous: true — message has mixed or unclear intent; run through the real
+#   agent loop (real Claude, mocked tool execution). A disagreement here is
+#   informational, not necessarily a bug.
+#
+# hand_labelled: true marks examples written without looking at the prompts first.
+
+examples:
+
+  # ── rag_search (4: 2 clear, 2 ambiguous) ──────────────────────────────────
+
+  - message: "What are your shipping options?"
+    expected_tool: rag_search
+    hand_labelled: true
+
+  - message: "How do I return a product I bought last week?"
+    expected_tool: rag_search
+    hand_labelled: true
+
+  - message: "Tell me more about your pricing plans"
+    expected_tool: rag_search
+    ambiguous: true
+
+  - message: "How do I cancel and get a refund?"
+    expected_tool: rag_search
+    ambiguous: true
+
+  # ── capture_lead (4: 3 clear, 1 ambiguous) ────────────────────────────────
+
+  - message: "I'm interested in buying, can someone contact me?"
+    expected_tool: capture_lead
+    hand_labelled: true
+
+  - message: "Can I get a quote for a team subscription?"
+    expected_tool: capture_lead
+
+  - message: "I want to speak to your sales team about bulk pricing."
+    expected_tool: capture_lead
+
+  - message: "I'd like to get in touch with someone about signing up"
+    expected_tool: capture_lead
+    ambiguous: true
+
+  # ── escalate (4: 2 clear, 2 ambiguous) ────────────────────────────────────
+
+  - message: "I was charged twice for my order and nobody is helping me. I want to speak to a manager."
+    expected_tool: escalate
+    hand_labelled: true
+
+  - message: "My account has been compromised. I need urgent help."
+    expected_tool: escalate
+
+  - message: "I have a problem with my order"
+    expected_tool: escalate
+    ambiguous: true
+
+  - message: "I'm really not happy with the service I received"
+    expected_tool: escalate
+    ambiguous: true
+
+  # ── null (3: all clear) ───────────────────────────────────────────────────
+
+  - message: "Hi there!"
+    expected_tool: null
+    hand_labelled: true
+
+  - message: "Thanks, that's all I needed."
+    expected_tool: null
+
+  - message: "What's the weather like today?"
+    expected_tool: null

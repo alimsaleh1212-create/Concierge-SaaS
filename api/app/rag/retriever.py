@@ -30,8 +30,8 @@ async def retrieve(
 ) -> list[ParentChunk]:
     """Return top-k parent chunks for query, scoped to tenant_id.
 
-    Active improvement: reranking (voyage-rerank-2).
-    Both candidates were measured on the 15-triple golden set — see DECISIONS.md.
+    Active strategy: reranking (voyage-rerank-2).
+    Run evals/rag/test_rag.py::test_rag_strategy_comparison for a full comparison.
     """
     return await _retrieve_with_rerank(query, tenant_id, session, top_k)
 
@@ -76,7 +76,71 @@ async def _retrieve_with_rerank(
     ]
 
 
-# ── T-B033: Query-rewriting branch (measured, not active) ────────────────────
+# ── Baseline (cosine only — no reranking, no query expansion) ────────────────
+
+async def _retrieve_baseline(
+    query: str,
+    tenant_id: uuid.UUID,
+    session: AsyncSession,
+    top_k: int = 5,
+) -> list[ParentChunk]:
+    """Plain cosine top-k search — no reranking, no query expansion."""
+    query_vec = await embed_query(query)
+    repo = EmbeddingRepository(session)
+    rows = await repo.cosine_search(query_vec, tenant_id, top_k)
+    return [
+        ParentChunk(
+            chunk_index=row.chunk_index,
+            child_text=row.chunk_text,
+            parent_text=row.parent_chunk_text,
+            content_id=row.content_id,
+        )
+        for row in rows
+    ]
+
+
+# ── HyDE branch (comparison, not active) ─────────────────────────────────────
+
+async def _retrieve_with_hyde(
+    query: str,
+    tenant_id: uuid.UUID,
+    session: AsyncSession,
+    top_k: int = 5,
+) -> list[ParentChunk]:
+    """Hypothetical Document Embedding: embed a generated answer, not the question.
+
+    Generates a plausible answer paragraph, embeds it, then cosine-searches.
+    Kept for comparison — see DECISIONS.md RAG-001.
+    """
+    response = await chat_completion(
+        messages=[{"role": "user", "content": query}],
+        system=(
+            "Write a short factual paragraph (2–4 sentences) that directly answers the "
+            "user's question, as if it were text in a business FAQ knowledge base. "
+            "Return only the answer text, no preamble."
+        ),
+        max_tokens=128,
+    )
+    hypothetical_doc = next(
+        (b.text for b in response.content if b.type == "text"), query
+    ).strip()
+    logger.debug("HyDE doc: %r → %r", query, hypothetical_doc)
+
+    query_vec = await embed_query(hypothetical_doc)
+    repo = EmbeddingRepository(session)
+    rows = await repo.cosine_search(query_vec, tenant_id, top_k)
+    return [
+        ParentChunk(
+            chunk_index=row.chunk_index,
+            child_text=row.chunk_text,
+            parent_text=row.parent_chunk_text,
+            content_id=row.content_id,
+        )
+        for row in rows
+    ]
+
+
+# ── T-B033: Query-rewriting branch (comparison, not active) ──────────────────
 
 async def _retrieve_with_query_rewrite(
     query: str,
@@ -86,8 +150,7 @@ async def _retrieve_with_query_rewrite(
 ) -> list[ParentChunk]:
     """Rewrite the query via Claude before embedding, then cosine-search.
 
-    Scored lower than reranking on the 15-triple golden set — see DECISIONS.md.
-    Kept here for reference; not called by retrieve().
+    Kept for comparison against reranking — see DECISIONS.md RAG-001.
     """
     response = await chat_completion(
         messages=[{"role": "user", "content": query}],

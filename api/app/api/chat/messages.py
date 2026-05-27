@@ -91,6 +91,7 @@ async def post_message(
             tenant_name=claims.get("tenant_name", "our business"),
             persona=claims.get("persona", "a helpful customer service agent"),
             allowed_topics=claims.get("allowed_topics", "questions related to our business"),
+            visitor_ip=request.client.host if request.client else None,
         )
 
         # 6. Route → workflow or agent
