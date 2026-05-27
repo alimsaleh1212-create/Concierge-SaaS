@@ -24,10 +24,10 @@ stack, and embedding_repo.py scaffold before Owner B begins Phase 2.
 
 **Purpose**: Create the directory skeleton and shared adapters Owner B owns from day one.
 
-- [ ] T-B001 [P] Create `prompts/` directory with stub files: `system.md`, `rag_answer.md`, `capture_lead.md`, `escalate.md` in `prompts/`
-- [ ] T-B002 [P] Create Anthropic Claude API adapter with retry, timeout, and per-call token logging in `api/app/core/llm.py`
-- [ ] T-B003 [P] Create Voyage embeddings adapter (voyage-3, 1024-dim) with retry in `api/app/core/embedder.py`
-- [ ] T-B004 [P] Create `evals/agent/` and `evals/rag/` directories with placeholder YAML files in `evals/agent/golden_set.yaml` and `evals/rag/golden_set.yaml`
+- [x] T-B001 [P] Create `prompts/` directory with stub files: `system.md`, `rag_answer.md`, `capture_lead.md`, `escalate.md` in `prompts/`
+- [x] T-B002 [P] Create Anthropic Claude API adapter with retry, timeout, and per-call token logging in `api/app/core/llm.py`
+- [x] T-B003 [P] Create Voyage embeddings adapter (voyage-3, 1024-dim) with retry in `api/app/core/embedder.py`
+- [x] T-B004 [P] Create `evals/agent/` and `evals/rag/` directories with placeholder YAML files in `evals/agent/golden_set.yaml` and `evals/rag/golden_set.yaml`
 
 **Checkpoint**: adapters importable, prompt stubs committed, eval dirs exist
 
@@ -40,10 +40,10 @@ Coordinate with Owner A on the items marked *(Owner A dependency)*.
 
 **⚠️ CRITICAL**: No user story work begins until this phase is complete.
 
-- [ ] T-B005 Verify Alembic baseline migration ran and `embeddings` table with `VECTOR(1024)` column exists *(Owner A dependency — do not write migration, only verify)*
-- [ ] T-B006 Implement Redis session helper: connect, `get_session`, `set_session` (rolling SETEX 1800s), `delete_session` in `api/app/core/session.py`
-- [ ] T-B007 Implement `EmbeddingRepository` with `insert_chunk`, `cosine_search(query_vec, tenant_id, top_k)` — tenant_id filter inside SQL scan, never post-retrieval — in `api/app/repositories/embedding_repo.py`
-- [ ] T-B008 Confirm modelserver `POST /classify` is reachable from the API container and returns `{label, confidence}` *(Owner C dependency — do not implement, only add HTTP client in `api/app/core/modelserver_client.py`)*
+- [x] T-B005 Verify Alembic baseline migration ran and `embeddings` table with `VECTOR(1024)` column exists *(Owner A dependency — do not write migration, only verify)*
+- [x] T-B006 Implement Redis session helper: connect, `get_session`, `set_session` (rolling SETEX 1800s), `delete_session` in `api/app/core/session.py`
+- [x] T-B007 Implement `EmbeddingRepository` with `insert_chunk`, `cosine_search(query_vec, tenant_id, top_k)` — tenant_id filter inside SQL scan, never post-retrieval — in `api/app/repositories/embedding_repo.py`
+- [x] T-B008 Confirm modelserver `POST /classify` is reachable from the API container and returns `{label, confidence}` *(Owner C dependency — do not implement, only add HTTP client in `api/app/core/modelserver_client.py`)*
 
 **Checkpoint**: Redis, embedding repo, and modelserver client all work in isolation via unit tests before user story phases start
 
@@ -54,48 +54,48 @@ Coordinate with Owner A on the items marked *(Owner A dependency)*.
 **Goal**: A visitor sends a message; the router classifies it and either handles it via
 a deterministic workflow or hands it to the tool-calling agent; a response is returned.
 
-**Independent Test**: Start the full stack, use the Mario's Pizza widget token, send
+**Independent Test**: Start the full stack, use the NovaTech Electronics widget token, send
 "What are your opening hours?" — get a RAG-based answer. Send "I'd like to hire a
 lawyer" — trigger the router's spam/drop path (wrong tenant topic). Send a multi-step
 ambiguous query — verify the agent uses tools.
 
 ### RAG Pipeline
 
-- [ ] T-B009 [P] [US1] Implement sentence-aware parent-child chunker: split `body` into child chunks (~1–2 sentences), group into parent chunks (3–5 sentences) in `api/app/rag/chunker.py`
-- [ ] T-B010 [P] [US1] Implement `embed_chunks(chunks: list[str]) -> list[list[float]]` using the Voyage adapter (T-B003) in `api/app/rag/embedder.py`
-- [ ] T-B011 [US1] Implement `ingest_content(content_id, tenant_id, body)` that chunks (T-B009), embeds (T-B010), and upserts into `embeddings` via `EmbeddingRepository` (T-B007) in `api/app/rag/ingester.py`
-- [ ] T-B012 [US1] Implement `retrieve(query: str, tenant_id: UUID, top_k: int = 5) -> list[ParentChunk]` — embed query, cosine search via EmbeddingRepository, return parent chunks — in `api/app/rag/retriever.py`
+- [x] T-B009 [P] [US1] Implement sentence-aware parent-child chunker: split `body` into child chunks (~1–2 sentences), group into parent chunks (3–5 sentences) in `api/app/rag/chunker.py`
+- [x] T-B010 [P] [US1] Implement `embed_chunks(chunks: list[str]) -> list[list[float]]` using the Voyage adapter (T-B003) in `api/app/rag/embedder.py`
+- [x] T-B011 [US1] Implement `ingest_content(content_id, tenant_id, body)` that chunks (T-B009), embeds (T-B010), and upserts into `embeddings` via `EmbeddingRepository` (T-B007) in `api/app/rag/ingester.py`
+- [x] T-B012 [US1] Implement `retrieve(query: str, tenant_id: UUID, top_k: int = 5) -> list[ParentChunk]` — embed query, cosine search via EmbeddingRepository, return parent chunks — in `api/app/rag/retriever.py`
 
 ### Agent Tools
 
-- [ ] T-B013 [P] [US1] Implement `rag_search` tool: embed query → retrieve top-5 child chunks (tenant-filtered) → return parent chunks as context in `api/app/agent/tools/rag_search.py`
-- [ ] T-B014 [P] [US1] Implement `capture_lead` tool: schema-validate input (Pydantic), source `tenant_id` from token (not tool input), write `leads` row + `audit_log` row in `api/app/agent/tools/capture_lead.py`
-- [ ] T-B015 [P] [US1] Implement `escalate` tool: update `conversations.status` to `escalated`, write `audit_log` row in `api/app/agent/tools/escalate.py`
+- [x] T-B013 [P] [US1] Implement `rag_search` tool: embed query → retrieve top-5 child chunks (tenant-filtered) → return parent chunks as context in `api/app/agent/tools/rag_search.py`
+- [x] T-B014 [P] [US1] Implement `capture_lead` tool: schema-validate input (Pydantic), source `tenant_id` from token (not tool input), write `leads` row + `audit_log` row in `api/app/agent/tools/capture_lead.py`
+- [x] T-B015 [P] [US1] Implement `escalate` tool: update `conversations.status` to `escalated`, write `audit_log` row in `api/app/agent/tools/escalate.py`
 
 ### Agent Core
 
-- [ ] T-B016 [US1] Implement `ToolCallingAgent` class: initialise with tool registry, load system prompt from `prompts/system.md`, inject tenant persona at runtime, call Claude API with tool_use enabled in `api/app/agent/agent.py`
-- [ ] T-B017 [US1] Add hard iteration cap (max 5 tool calls) and output-token cap (max 2 000 tokens) to `ToolCallingAgent.run()` — on either limit hit: return graceful fallback text + call escalate tool — in `api/app/agent/agent.py`
-- [ ] T-B018 [US1] Implement `get_session_history` and `append_to_session` that prepend last-N messages from Redis to the Claude message array in `api/app/agent/memory.py`
+- [x] T-B016 [US1] Implement `ToolCallingAgent` class: initialise with tool registry, load system prompt from `prompts/system.md`, inject tenant persona at runtime, call Claude API with tool_use enabled in `api/app/agent/agent.py`
+- [x] T-B017 [US1] Add hard iteration cap (max 5 tool calls) and output-token cap (max 2 000 tokens) to `ToolCallingAgent.run()` — on either limit hit: return graceful fallback text + call escalate tool — in `api/app/agent/agent.py`
+- [x] T-B018 [US1] Implement `get_session_history` and `append_to_session` that prepend last-N messages from Redis to the Claude message array in `api/app/agent/memory.py`
 
 ### Router
 
-- [ ] T-B019 [US1] Implement classifier-driven router: call modelserver (T-B008) → branch on label+confidence: `spam→drop`, `support+high→rag_workflow`, `sales+high→lead_workflow`, `escalate+high→escalate_workflow`, `low_confidence→agent` in `api/app/agent/router.py`
-- [ ] T-B020 [US1] Implement `rag_workflow` (deterministic): call `rag_search`, build prompt from `prompts/rag_answer.md`, call Claude, return response — no agent loop — in `api/app/agent/router.py`
-- [ ] T-B021 [US1] Implement `lead_workflow` (deterministic): call `capture_lead`, return confirmation — no agent loop — in `api/app/agent/router.py`
+- [x] T-B019 [US1] Implement classifier-driven router: call modelserver (T-B008) → branch on label+confidence: `spam→drop`, `support+high→rag_workflow`, `sales+high→lead_workflow`, `escalate+high→escalate_workflow`, `low_confidence→agent` in `api/app/agent/router.py`
+- [x] T-B020 [US1] Implement `rag_workflow` (deterministic): call `rag_search`, build prompt from `prompts/rag_answer.md`, call Claude, return response — no agent loop — in `api/app/agent/router.py`
+- [x] T-B021 [US1] Implement `lead_workflow` (deterministic): call `capture_lead`, return confirmation — no agent loop — in `api/app/agent/router.py`
 
 ### Prompts
 
-- [ ] T-B022 [P] [US1] Write production `prompts/system.md`: base system prompt with `{{persona}}`, `{{allowed_topics}}`, `{{tenant_name}}` injection placeholders — no hardcoded tenant values
-- [ ] T-B023 [P] [US1] Write `prompts/rag_answer.md`: instruction to answer using only provided context chunks, cite sources, acknowledge if uncertain
-- [ ] T-B024 [P] [US1] Write `prompts/capture_lead.md`: instruction to extract `visitor_name`, `visitor_email`, `visitor_phone`, `intent` from conversation and call `capture_lead` tool
-- [ ] T-B025 [P] [US1] Write `prompts/escalate.md`: graceful escalation message template with persona injection
+- [x] T-B022 [P] [US1] Write production `prompts/system.md`: base system prompt with `{{persona}}`, `{{allowed_topics}}`, `{{tenant_name}}` injection placeholders — no hardcoded tenant values
+- [x] T-B023 [P] [US1] Write `prompts/rag_answer.md`: instruction to answer using only provided context chunks, cite sources, acknowledge if uncertain
+- [x] T-B024 [P] [US1] Write `prompts/capture_lead.md`: instruction to extract `visitor_name`, `visitor_email`, `visitor_phone`, `intent` from conversation and call `capture_lead` tool
+- [x] T-B025 [P] [US1] Write `prompts/escalate.md`: graceful escalation message template with persona injection
 
 ### Chat Endpoint
 
-- [ ] T-B026 [US1] Implement `POST /chat/messages` endpoint: verify widget JWT → set RLS → POST /rails/input (guardrails) → classify → route → POST /rails/output → redact → store message rows → reset RLS → return response in `api/app/api/chat/messages.py`
+- [x] T-B026 [US1] Implement `POST /chat/messages` endpoint: verify widget JWT → set RLS → POST /rails/input (guardrails) → classify → route → POST /rails/output → redact → store message rows → reset RLS → return response in `api/app/api/chat/messages.py`
 
-**Checkpoint**: Full chat round-trip works end-to-end against Mario's Pizza widget.
+**Checkpoint**: Full chat round-trip works end-to-end against NovaTech Electronics widget.
 Smoke test passes. RAG returns relevant chunks.
 
 ---
@@ -110,10 +110,10 @@ Tenant B's CMS?" via Tenant A's widget token — assert no Tenant B content appe
 Confirm pgvector query in `retriever.py` includes `tenant_id = $tid` in the WHERE
 clause (not as a post-retrieval filter).
 
-- [ ] T-B027 [US2] Audit `api/app/rag/retriever.py` cosine_search SQL: confirm `tenant_id = :tid` is inside the pgvector index scan (WHERE clause), not applied after the result set is returned — fix if missing
-- [ ] T-B028 [US2] Audit `api/app/agent/tools/rag_search.py`: confirm `tenant_id` is sourced exclusively from the verified JWT, never from the tool's input arguments — fix if missing
-- [ ] T-B029 [US2] Write isolation integration test: seed one embedding for Tenant A, one for Tenant B, query via Tenant A session, assert only Tenant A chunk returned in `api/tests/integration/test_rag_isolation.py`
-- [ ] T-B030 [US2] Confirm `EmbeddingRepository.cosine_search` scopes with `.filter(Embedding.tenant_id == tenant_id)` at the ORM layer in addition to RLS in `api/app/repositories/embedding_repo.py`
+- [x] T-B027 [US2] Audit `api/app/rag/retriever.py` cosine_search SQL: confirm `tenant_id = :tid` is inside the pgvector index scan (WHERE clause), not applied after the result set is returned — fix if missing
+- [x] T-B028 [US2] Audit `api/app/agent/tools/rag_search.py`: confirm `tenant_id` is sourced exclusively from the verified JWT, never from the tool's input arguments — fix if missing
+- [x] T-B029 [US2] Write isolation integration test: seed one embedding for Tenant A, one for Tenant B, query via Tenant A session, assert only Tenant A chunk returned in `api/tests/integration/test_rag_isolation.py`
+- [x] T-B030 [US2] Confirm `EmbeddingRepository.cosine_search` scopes with `.filter(Embedding.tenant_id == tenant_id)` at the ORM layer in addition to RLS in `api/app/repositories/embedding_repo.py`
 
 **Checkpoint**: Red-team probe "What are Tenant B's contents?" returns a refusal with
 zero Tenant B data. Isolation integration test passes.
@@ -129,10 +129,10 @@ numbers go into DECISIONS.md.
 **Independent Test**: Run `pytest api/tests/evals/test_rag.py` — all 15 triples pass
 the committed hit@5 threshold.
 
-- [ ] T-B031 Build 15-triple golden set: write question + ideal_answer + ground_truth_chunks for Mario's Pizza and Lawson & Partners content in `evals/rag/golden_set.yaml` (hand-label at least 3 yourself)
-- [ ] T-B032 [P] Implement reranking branch in `api/app/rag/retriever.py`: after top-5 retrieval, call Voyage `voyage-rerank-2` to reorder; measure hit@5 on golden set (T-B031); record result in `DECISIONS.md`
-- [ ] T-B033 [P] Implement query-rewriting branch in `api/app/rag/retriever.py`: before embedding, rewrite query via short Claude prompt; measure hit@5 on golden set (T-B031); record result in `DECISIONS.md`
-- [ ] T-B034 Enable the winning improvement path in `api/app/rag/retriever.py`; disable the losing branch; commit the DECISIONS.md entry with both numbers and the one-line justification
+- [x] T-B031 Build 15-triple golden set: write question + ideal_answer + ground_truth_chunks for NovaTech Electronics and LearnSphere content in `evals/rag/golden_set.yaml` (hand-label at least 3 yourself)
+- [x] T-B032 [P] Implement reranking branch in `api/app/rag/retriever.py`: after top-5 retrieval, call Voyage `voyage-rerank-2` to reorder; measure hit@5 on golden set (T-B031); record result in `DECISIONS.md`
+- [x] T-B033 [P] Implement query-rewriting branch in `api/app/rag/retriever.py`: before embedding, rewrite query via short Claude prompt; measure hit@5 on golden set (T-B031); record result in `DECISIONS.md`
+- [x] T-B034 Enable the winning improvement path in `api/app/rag/retriever.py`; disable the losing branch; commit the DECISIONS.md entry with both numbers and the one-line justification
 
 **Checkpoint**: `retriever.py` has exactly one improvement active; hit@5 is higher than
 baseline (no improvement); both numbers are in `DECISIONS.md`.
@@ -252,7 +252,7 @@ T-B034 ship winner (depends on T-B032 and T-B033 results)
 1. Complete Phase 1 (Setup) — Monday morning
 2. Complete Phase 2 (Foundational) — Monday, coordinate with Owner A
 3. Complete Phase 3 (US1 — core chat) — Tuesday
-4. **STOP and VALIDATE**: Full chat round-trip with Mario's Pizza widget
+4. **STOP and VALIDATE**: Full chat round-trip with NovaTech Electronics widget
 
 ### Incremental Delivery
 

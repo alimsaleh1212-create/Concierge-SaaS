@@ -1,9 +1,9 @@
-"""Idempotent seed for Mario's Pizza demo tenant (DECISIONS.md D-005).
+"""Idempotent seed for NovaTech Electronics demo tenant (Tenant A).
 
 Safe to run multiple times — skips rows that already exist.
 """
 import asyncio
-import uuid
+import secrets
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,68 +14,82 @@ from app.models.cms_content import CmsContent
 from app.models.tenant import Tenant
 from app.models.user import User
 from app.models.widget import Widget
+from app.rag.ingester import ingest_content
 
-import secrets
-
-_TENANT_SLUG = "marios-pizza"
-_ADMIN_EMAIL = "admin@mariospizza.example.com"
+_TENANT_SLUG = "novatech-electronics"
+_ADMIN_EMAIL = "admin@novatech.example.com"
 
 _CMS_ITEMS = [
     {
-        "title": "Our Menu",
+        "title": "About NovaTech Electronics",
         "body": (
-            "Mario's Pizza offers a wide selection of handcrafted pizzas, pastas, and salads. "
-            "Our signature dishes include the Margherita (tomato, mozzarella, basil), "
-            "the Pepperoni Feast, and the Veggie Supreme with seasonal vegetables. "
-            "All pizzas are available in 10\", 12\", and 16\" sizes."
+            "NovaTech Electronics is an online store specialising in consumer electronics, "
+            "smart home devices, laptops, smartphones, audio equipment, and accessories. "
+            "We carry over 10,000 SKUs from brands including Sony, Samsung, Apple, Dell, Bose, and Anker. "
+            "All products come with a minimum 1-year manufacturer warranty."
         ),
         "content_type": "page",
     },
     {
-        "title": "Opening Hours",
+        "title": "Shipping Policy",
         "body": (
-            "We are open Monday–Thursday 11am–10pm, Friday–Saturday 11am–11pm, "
-            "and Sunday 12pm–9pm. We are closed on Thanksgiving and Christmas Day."
+            "Standard shipping is free on orders over $50 and takes 3–5 business days. "
+            "Express shipping (1–2 business days) is available for $9.99. "
+            "Same-day delivery is available in select metro areas for orders placed before 12pm. "
+            "International shipping is available to 30+ countries — rates calculated at checkout."
         ),
         "content_type": "faq",
     },
     {
-        "title": "Delivery FAQ",
+        "title": "Returns & Refunds",
         "body": (
-            "Do you deliver? Yes! We deliver within a 5-mile radius. Delivery takes 30–45 minutes. "
-            "Minimum order is $15. We use our own drivers — no third-party apps. "
-            "Delivery fee is $3.99. Free delivery on orders over $40."
+            "We accept returns within 30 days of delivery for most items in original condition. "
+            "Opened software, digital downloads, and personalised items are non-returnable. "
+            "To start a return, visit your order history and click 'Return Item'. "
+            "Refunds are processed within 5–7 business days after we receive the item."
         ),
         "content_type": "faq",
     },
     {
-        "title": "Our Location",
+        "title": "Warranty & Repairs",
         "body": (
-            "Find us at 123 Olive Street, Downtown. We have free parking in the lot behind the restaurant. "
-            "We're two blocks from the Central Metro station (Blue Line)."
+            "All products sold by NovaTech include the manufacturer's warranty. "
+            "Extended warranty plans (1–3 years) are available at checkout for most categories. "
+            "For repairs, contact our support team at support@novatech.example.com or call 1-800-668-2832. "
+            "We partner with authorised service centres in 50+ cities."
         ),
-        "content_type": "page",
+        "content_type": "faq",
     },
     {
-        "title": "Weekly Specials",
+        "title": "Top Product Categories",
         "body": (
-            "Tuesday: Buy one pizza, get one 50% off. "
-            "Wednesday: Family meal deal — large pizza + 2 sides + 4 drinks for $39.99. "
-            "Friday: Happy Hour 3–6pm, all draft beers $4."
+            "Laptops & Computers: Gaming laptops, ultrabooks, desktops, and monitors. "
+            "Smartphones & Tablets: Latest iPhone, Samsung Galaxy, iPad, and Android models. "
+            "Audio: Noise-cancelling headphones, earbuds, soundbars, and hi-fi speakers. "
+            "Smart Home: Smart speakers, security cameras, robot vacuums, and lighting. "
+            "Accessories: Cables, chargers, cases, screen protectors, and storage."
         ),
         "content_type": "product",
+    },
+    {
+        "title": "Payment & Security",
+        "body": (
+            "We accept Visa, Mastercard, American Express, PayPal, Apple Pay, and Google Pay. "
+            "Buy Now Pay Later is available via Klarna (0% interest for 3 months on orders over $200). "
+            "All transactions are encrypted with TLS 1.3. We do not store card numbers."
+        ),
+        "content_type": "faq",
     },
 ]
 
 
 async def seed(session: AsyncSession) -> None:
-    # Idempotency check
     result = await session.execute(select(Tenant).where(Tenant.slug == _TENANT_SLUG))
     tenant = result.scalar_one_or_none()
 
     if tenant is None:
         tenant = Tenant(
-            name="Mario's Pizza",
+            name="NovaTech Electronics",
             slug=_TENANT_SLUG,
             allowed_origins=["http://localhost:3000"],
         )
@@ -85,7 +99,6 @@ async def seed(session: AsyncSession) -> None:
     else:
         print(f"[seed] Tenant already exists: {_TENANT_SLUG}")
 
-    # Admin user
     result = await session.execute(select(User).where(User.email == _ADMIN_EMAIL))
     if result.scalar_one_or_none() is None:
         session.add(User(
@@ -97,32 +110,39 @@ async def seed(session: AsyncSession) -> None:
         ))
         print(f"[seed] Created admin user: {_ADMIN_EMAIL}")
 
-    # Widget
     result = await session.execute(select(Widget).where(Widget.tenant_id == tenant.id))
     if result.scalar_one_or_none() is None:
         session.add(Widget(
             tenant_id=tenant.id,
-            name="Mario's Chat Widget",
+            name="NovaTech Support Widget",
             widget_token_secret=secrets.token_hex(32),
             allowed_origins=["http://localhost:3000"],
-            greeting="Hi! Welcome to Mario's Pizza. How can I help you today?",
+            greeting="Hi! Welcome to NovaTech Electronics. How can I help you today?",
         ))
         print("[seed] Created widget")
 
-    # CMS items
     result = await session.execute(
         select(CmsContent).where(CmsContent.tenant_id == tenant.id, CmsContent.is_deleted == False)  # noqa: E712
     )
-    existing_count = len(result.scalars().all())
+    existing_items = result.scalars().all()
+    existing_count = len(existing_items)
     if existing_count == 0:
+        new_items: list[CmsContent] = []
         for item in _CMS_ITEMS:
-            session.add(CmsContent(tenant_id=tenant.id, **item))
+            cms = CmsContent(tenant_id=tenant.id, **item)
+            session.add(cms)
+            new_items.append(cms)
+        await session.flush()
         print(f"[seed] Created {len(_CMS_ITEMS)} CMS items")
+
+        for cms in new_items:
+            chunks_written = await ingest_content(cms.id, tenant.id, cms.body, session)
+            print(f"[seed] Ingested {chunks_written} chunks for '{cms.title}'")
     else:
         print(f"[seed] CMS items already exist ({existing_count}), skipping")
 
     await session.commit()
-    print("[seed] Mario's Pizza seed complete")
+    print("[seed] NovaTech Electronics seed complete")
 
 
 if __name__ == "__main__":

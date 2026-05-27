@@ -6,13 +6,18 @@ from fastapi import HTTPException, status
 
 from app.core.config import get_settings
 
+# bcrypt hard-limits passwords to 72 bytes — encode + truncate explicitly
+_BCRYPT_MAX = 72
+
 
 def get_password_hash(password: str) -> str:
-    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+    secret = password.encode("utf-8")[:_BCRYPT_MAX]
+    return bcrypt.hashpw(secret, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return bcrypt.checkpw(plain.encode(), hashed.encode())
+    secret = plain.encode("utf-8")[:_BCRYPT_MAX]
+    return bcrypt.checkpw(secret, hashed.encode("utf-8"))
 
 
 @dataclass
