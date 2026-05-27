@@ -27,7 +27,9 @@ else
     MINIO_SECRET_KEY="${MINIO_ROOT_PASSWORD:-minioadmin}" \
     MODELSERVER_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
     GUARDRAILS_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
-    JWT_SECRET="$(cat /dev/urandom | head -c 48 | base64 | tr -d '=+/' | head -c 64)"
+    JWT_SECRET="$(cat /dev/urandom | head -c 48 | base64 | tr -d '=+/' | head -c 64)" \
+    ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set in .env}" \
+    VOYAGE_API_KEY="${VOYAGE_API_KEY:?VOYAGE_API_KEY must be set in .env}"
 
   echo "[vault-init] Secrets written."
 fi

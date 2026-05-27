@@ -17,11 +17,9 @@ class Settings(BaseSettings):
     # Set DEV_MODE=true in .env to skip Vault entirely (local dev only)
     DEV_MODE: bool = False
 
-    # Supplied by user via .env — everything else comes from Vault
+    # Supplied by user via .env — used only to bootstrap Vault connection
     VAULT_ADDR: str = "http://vault:8200"
     VAULT_ROOT_TOKEN: str = ""
-    ANTHROPIC_API_KEY: str = ""
-    VOYAGE_API_KEY: str = ""
 
     # Populated from Vault at startup (or from .env when DEV_MODE=true)
     DATABASE_URL: str = ""
@@ -29,9 +27,13 @@ class Settings(BaseSettings):
     MINIO_ENDPOINT: str = ""
     MINIO_ACCESS_KEY: str = ""
     MINIO_SECRET_KEY: str = ""
-    MODELSERVER_SERVICE_TOKEN: str = "dev-modelserver-token"
-    GUARDRAILS_SERVICE_TOKEN: str = "dev-guardrails-token"
+    MODELSERVER_BASE_URL: str = "http://modelserver:8001"
+    GUARDRAILS_BASE_URL: str = "http://guardrails:8002"
+    MODELSERVER_SERVICE_TOKEN: str = ""
+    GUARDRAILS_SERVICE_TOKEN: str = ""
     JWT_SECRET: str = ""
+    ANTHROPIC_API_KEY: str = ""
+    VOYAGE_API_KEY: str = ""
 
     class Config:
         env_file = _ENV_FILE
@@ -63,3 +65,5 @@ def _load_vault_secrets(settings: Settings) -> None:
     settings.MODELSERVER_SERVICE_TOKEN = data["MODELSERVER_SERVICE_TOKEN"]
     settings.GUARDRAILS_SERVICE_TOKEN = data["GUARDRAILS_SERVICE_TOKEN"]
     settings.JWT_SECRET = data["JWT_SECRET"]
+    settings.ANTHROPIC_API_KEY = data["ANTHROPIC_API_KEY"]
+    settings.VOYAGE_API_KEY = data["VOYAGE_API_KEY"]
