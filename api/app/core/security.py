@@ -32,7 +32,7 @@ class TokenClaims:
 class WidgetTokenClaims:
     tenant_id: str
     widget_id: str
-    session_id: str
+    # session_id is a client-supplied body field per contract, not a JWT claim
 
 
 def verify_admin_token(token: str) -> TokenClaims:
@@ -56,10 +56,10 @@ def verify_admin_token(token: str) -> TokenClaims:
     )
 
 
-def verify_widget_token(token: str, body_tenant_id: str) -> WidgetTokenClaims:
-    """Verify a short-lived visitor JWT signed with widget_token_secret.
+def verify_widget_token(token: str) -> WidgetTokenClaims:
+    """Verify a short-lived visitor JWT. Returns tenant_id and widget_id from claims only.
 
-    Raises HTTP 401 on invalid token, HTTP 403 if tenant_id in body mismatches JWT.
+    FR-014: tenant_id must never come from the request body. Raises HTTP 401 on invalid token.
     """
     settings = get_settings()
     try:
@@ -72,19 +72,10 @@ def verify_widget_token(token: str, body_tenant_id: str) -> WidgetTokenClaims:
     except jwt.PyJWTError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid widget token") from exc
 
-    claims = WidgetTokenClaims(
+    return WidgetTokenClaims(
         tenant_id=payload["tenant_id"],
         widget_id=payload["widget_id"],
-        session_id=payload["session_id"],
     )
-
-    if claims.tenant_id != body_tenant_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="tenant_id in request body does not match token claim",
-        )
-
-    return claims
 
 
 def verify_service_token(token: str, expected: str) -> None:
