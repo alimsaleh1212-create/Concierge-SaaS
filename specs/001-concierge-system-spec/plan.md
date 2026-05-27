@@ -30,8 +30,9 @@ embeddings use the Voyage hosted API. No torch or transformers in any container.
 
 **Primary Dependencies**:
 - API: FastAPI 0.115+, SQLAlchemy 2.x, Alembic, fastapi-users 14+, PyJWT, anthropic SDK, voyageai SDK, redis-py, minio SDK, hvac (Vault)
+- API redaction: presidio-analyzer, presidio-anonymizer, spacy
 - Modelserver: onnxruntime, scikit-learn, numpy, FastAPI (no torch)
-- Guardrails: nemo-guardrails, presidio-analyzer, presidio-anonymizer, FastAPI
+- Guardrails: nemo-guardrails, FastAPI
 - Widget: Vite 5+, React 18, TypeScript
 - Admin: Streamlit 1.35+
 - Evals: ragas, pytest, pytest-asyncio
@@ -203,7 +204,8 @@ guardrails/                   # Owner C — NeMo sidecar
 │       └── tenant_rails.py   # Dynamic tenant topic injection
 ├── config/
 │   └── config.yml
-├── requirements.txt
+├── pyproject.toml
+├── uv.lock
 └── Dockerfile
 
 widget/                       # Owner D — Vite + React
