@@ -20,12 +20,11 @@ router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 class ChatRequest(BaseModel):
-    conversation_id: uuid.UUID
     content: str
-    session_id: str
 
 
 class ChatResponse(BaseModel):
+    session_id: str
     conversation_id: uuid.UUID
     response: str
     tool_used: str | None = None
@@ -55,11 +54,12 @@ async def post_message(
     body: ChatRequest,
     session: AsyncSession = Depends(get_db),
 ) -> ChatResponse:
-    # 1. Verify widget JWT → extract tenant_id, widget_id
+    # 1. Verify widget JWT → extract tenant_id, widget_id, session_id
     token = _extract_bearer(request)
     claims = _decode_widget_jwt(token)
     tenant_id = uuid.UUID(claims["tenant_id"])
     widget_id = uuid.UUID(claims["widget_id"])
+    session_id: str = claims["session_id"]
 
     # 2. RLS is set by get_db dependency via tenant_id path param; here we call directly
     from sqlalchemy import text
@@ -73,21 +73,19 @@ async def post_message(
         if await guardrails_client.check_input(body.content, tenant_id):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message blocked by platform policy.")
 
-        # 4. Load session history
+        # 4. Load conversation via JWT session_id — client cannot spoof a different session
         conv_repo = ConversationRepository(session)
-        conversation = await conv_repo.get(body.conversation_id, tenant_id)
+        conversation = await conv_repo.get_by_session(session_id, tenant_id)
         if conversation is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found.")
 
-        history = await get_session_history(tenant_id, body.conversation_id)
+        history = await get_session_history(tenant_id, conversation.id)
 
-        # 5. Build tenant context — persona/topics from widget theme_config if present
-        widget_cfg = conversation  # just for clarity; tenant name comes from tenant record
-        # Simple defaults — enriched by admin via theme_config in production
+        # 5. Build tenant context
         tenant_ctx = TenantContext(
             tenant_id=tenant_id,
             widget_id=widget_id,
-            conversation_id=body.conversation_id,
+            conversation_id=conversation.id,
             tenant_name=claims.get("tenant_name", "our business"),
             persona=claims.get("persona", "a helpful customer service agent"),
             allowed_topics=claims.get("allowed_topics", "questions related to our business"),
@@ -112,26 +110,27 @@ async def post_message(
         # 9. Persist messages
         session.add(Message(
             tenant_id=tenant_id,
-            conversation_id=body.conversation_id,
+            conversation_id=conversation.id,
             role="user",
             content=body.content,
         ))
         session.add(Message(
             tenant_id=tenant_id,
-            conversation_id=body.conversation_id,
+            conversation_id=conversation.id,
             role="assistant",
             content=safe_response,
         ))
         await session.flush()
 
         # 10. Update Redis session history
-        await append_to_session(tenant_id, body.conversation_id, "user", body.content)
-        await append_to_session(tenant_id, body.conversation_id, "assistant", safe_response)
+        await append_to_session(tenant_id, conversation.id, "user", body.content)
+        await append_to_session(tenant_id, conversation.id, "assistant", safe_response)
 
         await session.commit()
 
         return ChatResponse(
-            conversation_id=body.conversation_id,
+            session_id=session_id,
+            conversation_id=conversation.id,
             response=safe_response,
             tool_used=result.tool_used,
             escalated=result.escalated,
