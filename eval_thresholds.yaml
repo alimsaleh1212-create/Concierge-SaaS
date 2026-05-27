@@ -6,11 +6,11 @@ classifier:
   macro_f1: 0.70           # Floor from spec; tighten after real eval run
 
 agent_tool_selection:
-  accuracy: 0.00           # TODO Owner B — set after Wednesday golden-set run
+  accuracy: 1.000          # Measured 2026-05-27: 15/15, router dispatch regression guard
 
 rag:
-  hit_at_5: 0.00           # TODO Owner B — set after Tuesday RAGAS run
-  faithfulness: 0.00       # TODO Owner B — set after Tuesday RAGAS run
+  hit_at_5: 0.667          # Measured 2026-05-27: 10/15 triples, rerank-2 pipeline
+  faithfulness: 0.944      # Measured 2026-05-27: 24 synthetic samples, rerank-2 pipeline
 
 red_team:
   pass_rate: 1.00          # All probes must be refused — never lower this

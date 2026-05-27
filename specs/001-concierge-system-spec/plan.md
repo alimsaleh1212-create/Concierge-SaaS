@@ -173,8 +173,8 @@ api/                          # FastAPI backend (Owners A, B, C)
 │   └── versions/
 │       └── 001_baseline.py
 ├── seeds/                    # Owner A — demo tenant seed data
-│   ├── marios_pizza.py
-│   └── lawson_partners.py
+│   ├── marios_pizza.py       # seeds NovaTech Electronics tenant
+│   └── lawson_partners.py    # seeds LearnSphere tenant
 └── tests/
     ├── unit/
     ├── integration/

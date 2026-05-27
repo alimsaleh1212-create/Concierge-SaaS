@@ -8,6 +8,8 @@ from app.api.platform import audit as platform_audit
 from app.api.admin import cms as admin_cms
 from app.api.admin import widgets as admin_widgets
 from app.api.admin import leads as admin_leads
+from app.agent.router import validate_prompts
+from app.api.chat import messages as chat_messages
 from app.core.config import get_settings
 from app.middleware.rate_limit import TenantRateLimitMiddleware
 
@@ -16,6 +18,7 @@ from app.middleware.rate_limit import TenantRateLimitMiddleware
 async def lifespan(app: FastAPI):
     # Settings loaded here to surface Vault errors at startup, not at first request
     get_settings()
+    validate_prompts()
     yield
 
 
@@ -28,7 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_cms.router)
     app.include_router(admin_widgets.router)
     app.include_router(admin_leads.router)
-    # Owner B mounts: chat router
+    app.include_router(chat_messages.router)
     # Owner D mounts: auth router
 
     # ── Health ─────────────────────────────────────────────────────────────────
