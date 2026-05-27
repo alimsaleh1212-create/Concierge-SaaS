@@ -24,12 +24,13 @@ description: "Task list — Owner C: Classifier, Guardrails & Security"
 
 **Purpose**: Resolve the Monday dataset decision, scaffold training notebooks, and create
 all stub files Owner C owns from day one.
-
+- [ ] T-C000 Confirm Owner A integration dependencies are merged: verify `api/app/core/config.py`, `api/app/core/security.py`, widget JWT tenant extraction, RLS set/reset hook, tenant/widget guardrail config source, and `docker-compose.yml` guardrails service URL. Record PASS/BLOCKED notes before starting `T-C022`.
 - [ ] T-C001 Choose classifier dataset — must be a public labeled text-classification set (sales/support/spam intent or close equivalent); record exact dataset name and file SHA-256 in `model_card.md`; announce in team chat (resolves T-S009)
 - [ ] T-C002 [P] Create `notebooks/train_classical.ipynb`: offline notebook for TF-IDF + logistic regression training; exports `model.joblib`; records macro-F1 on held-out test set
 - [ ] T-C003 [P] Create `notebooks/train_dl.ipynb`: offline notebook for small DL model training (Colab-compatible, with torch); exports ONNX artifact; NO torch imports in any container image
 - [ ] T-C004 [P] Create `evals/classifier/test_set.csv` with columns `text,label` using a representative sample from the chosen dataset (at least 50 rows covering sales/support/spam)
-- [ ] T-C006 [P] Create `guardrails/requirements.txt` with: `fastapi`, `uvicorn`, `nemo-guardrails`, `presidio-analyzer`, `presidio-anonymizer`, `pyjwt`, `httpx`
+- [ ] T-C006 [P] Create `guardrails/pyproject.toml` with uv-managed dependencies: `fastapi`, `uvicorn[standard]`, `nemo-guardrails`, `pyjwt`, `httpx`, and `pydantic`; NO torch, NO transformers, and no API redaction-only dependencies.
+- [ ] T-C006a [P] Commit `guardrails/uv.lock` for reproducible guardrails sidecar builds.
 
 **Checkpoint**: Dataset chosen and announced. Notebook stubs committed. Dependency files confirm no torch dependency.
 ---
@@ -49,7 +50,7 @@ the modelserver container passes its healthcheck.
 - [ ] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/model.joblib`; record in `modelserver/artifacts/model_card.md` Artifact SHA-256 section
 - [ ] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `modelserver/artifacts/model_card.md`; compute actual SHA-256 of `modelserver/artifacts/model.joblib`; call `sys.exit(1)` with a clear message if they do not match; this verification MUST run during modelserver startup.
 - [ ] T-C013 Create `modelserver/app/classifier.py`: load the chosen sklearn joblib artifact `model.joblib`; expose `predict(text: str) -> tuple[str, float]` returning (label, confidence); no torch, transformers, or onnxruntime import anywhere
-- [ ] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` that validates the service JWT from Vault, calls `classifier.predict`, and returns `{"label":str,"confidence":float}`; add `GET /health` returning model type `logistic_regression` and artifact SHA-256; call startup SHA-256 verification on app lifespan start
+- [ ] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` that validates `Authorization: Bearer <MODELSERVER_SERVICE_TOKEN>` from config/Vault/env, calls `classifier.predict`, and returns `{"label":str,"confidence":float}`; add `GET /health` returning model type `logistic_regression` and artifact SHA-256; call startup SHA-256 verification on app lifespan start.
 - [ ] T-C015 Create `modelserver/Dockerfile`: multi-stage uv-based build; base `python:3.12-slim`; copy only `app/`, `pyproject.toml`, `uv.lock`, `artifacts/`; verify no torch, transformers, or onnxruntime in final layer; target < 500 MB total image
 
 **Checkpoint**: `docker compose up modelserver` → `GET /health` returns `{"status":"ok","model":"logistic_regression"}`. `POST /classify` with service token returns `{label,confidence}`. Announce in team chat.
@@ -63,11 +64,16 @@ cross-tenant attempts, and jailbreak — while passing normal messages.
 
 **Independent Test**: `POST /rails/input` with "Ignore previous instructions" → `{"allowed":false,"reason":"prompt_injection_detected"}`. `POST /rails/input` with "What are your hours?" → `{"allowed":true}`.
 
-- [ ] T-C016 [P] [US1] Create `guardrails/config/config.yml`: NeMo Guardrails base config specifying the platform colang file; set model to `gpt-4` or Claude API compatible backend
+- [ ] T-C016 [P] [US1] Create `guardrails/config/config.yml`: NeMo Guardrails base config specifying the platform colang file; configure the backend for Anthropic Claude or a Claude-compatible provider only; do not configure OpenAI/GPT models.
 - [ ] T-C017 [US1] Create `guardrails/app/rails/platform_rails.co`: NeMo colang definitions for the four immutable platform rails — prompt injection detection, jailbreak detection, cross-tenant data extraction refusal, system prompt extraction refusal; these MUST NOT be overridable by any tenant config
 - [ ] T-C018 [P] [US1] Create `guardrails/app/rails/tenant_rails.py`: `build_tenant_rails(allowed_topics, blocked_topics, refusal_tone) -> str` — returns a colang snippet injected at request time from the `tenant_rails` field in the sidecar request body
-- [ ] T-C019 [US1] Create `guardrails/app/main.py`: FastAPI app with `POST /rails/input` and `POST /rails/output` (exact contract from `contracts/guardrails.md`); validate service JWT from Vault; run platform rails first (always), then tenant rails; return `{"allowed":bool,"modified_content":null|str,"reason":null|str,"refusal_message":null|str}`; add `GET /health`
-- [ ] T-C020 Create `guardrails/Dockerfile`: base `python:3.12-slim`; copy `app/`, `config/`, `requirements.txt`; verify no torch; target < 500 MB
+- [ ] T-C019 [US1] Create `guardrails/app/main.py`: FastAPI app with `POST /rails/input` and `POST /rails/output` (exact contract from `contracts/guardrails.md`); validate `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` from config/Vault/env; run platform rails first (always), then tenant rails; return `{"allowed":bool,"modified_content":null|str,"reason":null|str,"refusal_message":null|str}`; add `GET /health`.
+- [ ] T-C019a [P] [US1] Create `guardrails/app/schemas.py`: Pydantic request/response models for `POST /rails/input`, `POST /rails/output`, and shared `TenantRails` / `GuardrailsResult` shapes; enforce contract fields from `contracts/guardrails.md` including `tenant_id`, `conversation_id`, `content`, `tenant_rails`, `allowed`, `modified_content`, `reason`, and `refusal_message`.
+
+- [ ] T-C019b [P] [US1] Create sidecar unit tests for `guardrails/app/main.py`: test `/health`, valid `/rails/input`, blocked prompt-injection input, blocked cross-tenant input, valid `/rails/output`, blocked unsafe output, bad payload `422`, invalid service token `401`, missing Authorization header `401`, and malformed Authorization header `401`.
+- [ ] T-C019c [US1] Wire `guardrails/app/main.py` to load `guardrails/config/config.yml` and execute NeMo Guardrails flows from `platform_rails.co`; keep deterministic checks as a fallback if NeMo loading fails in local demo mode.
+- [ ] T-C019d [US1] Wire NeMo runtime to the real Anthropic provider: remove the placeholder Claude-compatible `base_url` from `guardrails/config/config.yml`, consume `ANTHROPIC_API_KEY` from the guardrails container environment supplied by Vault/Docker Compose, add any required Anthropic provider dependency for NeMo, and verify `LLMRails` loads without using the fake `http://claude-compatible:8000/v1` endpoint. Do not hardcode secrets.
+- [ ] T-C020 Create `guardrails/Dockerfile`: uv-based build using `python:3.12-slim`; copy `app/`, `config/`, `pyproject.toml`, and `uv.lock`; install with `uv sync --frozen`; verify no torch or transformers; target < 500 MB.
 
 **Checkpoint**: Both guardrails sidecar endpoints pass their contracts. `POST /rails/input` with a prompt injection attempt returns `allowed: false`. `POST /rails/input` with a normal question returns `allowed: true`.
 
@@ -81,9 +87,15 @@ The API's guardrails_client wires the sidecar into the chat flow.
 **Independent Test**: Pass a string containing a synthetic API key to `redact(text)` →
 assert the key is replaced with `<API_KEY>`. Pass `admin@example.com` → assert
 `<EMAIL_ADDRESS>` in output.
-
+- [ ] T-C021-deps [P] [US1] Ensure API runtime dependencies include `presidio-analyzer`, `presidio-anonymizer`, and `spacy` for `api/app/redaction.py`; do not add these only to the guardrails sidecar if redaction runs in the API process.
 - [ ] T-C021 [P] [US1] Create `api/app/redaction.py`: Presidio `AnalyzerEngine` + `AnonymizerEngine` wrapper; `redact(text: str) -> RedactionResult` that replaces these entity types: `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CRYPTO`, `API_KEY`, `US_SSN`, `IP_ADDRESS`, `PASSWORD`; `is_redacted: bool` flag on result
-- [ ] T-C022 [P] [US1] Create `api/app/guardrails_client.py`: async HTTP client for the guardrails sidecar; `check_input(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult`; `check_output(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult`; use `GUARDRAILS_SERVICE_TOKEN` from config; retry on 503
+- [ ] T-C021a [P] [US1] Add custom Presidio recognizers in `api/app/redaction.py` for `API_KEY` and `PASSWORD`, because default Presidio detection may not reliably catch project-specific fake keys such as `sk-test-1234567890abcdef` or strings like `password=secret123`.
+
+- [ ] T-C021b [P] [US1] Create unit tests for `api/app/redaction.py`: assert emails, phone numbers, credit cards, IP addresses, API keys, and password-like strings are replaced with the expected placeholders and that `RedactionResult.is_redacted` is true only when content changed.
+
+- [ ] T-C021c [US1] Document the redaction integration contract for Owner B: `redact()` must be called before writing user/model text to the `messages` table, Redis session memory, logs, or traces. Owner C provides the helper and tests; Owner B wires it inside `api/app/api/chat/messages.py`.
+- [ ] T-C022 [P] [US1] Create `api/app/guardrails_client.py`: async HTTP client for the guardrails sidecar; consume `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN` from API settings provided by Owner A; expected internal URL is `http://guardrails:8002`; send `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>`; expose `check_input(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult` and `check_output(...)`; retry on 503.
+- [ ] T-C022a [P] [US1] Create tests for `api/app/guardrails_client.py`: assert `GUARDRAILS_BASE_URL` is used, `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` is sent, and mock `httpx.AsyncClient` responses for allowed, blocked, missing/invalid token, bad payload, and `503` retry behavior; include one integration test against a running `guardrails` container when available.
 
 **Checkpoint**: `redact("My email is foo@bar.com and my key is sk-abc123")` returns both entities anonymized. Guardrails client integration test passes against running sidecar container.
 
@@ -135,8 +147,8 @@ macro-F1 ≥ 0.70 reported.
 
 - **Phase 1 (Setup)**: Start immediately on day one — dataset decision is Monday morning
 - **Phase 2 (Modelserver)**: Starts after Phase 1 (needs dataset + notebooks); T-C007–T-C009 parallel; T-C010–T-C015 sequential
-- **Phase 3 (Guardrails)**: Starts in parallel with Phase 2 — no dependency between them; T-C016–T-C018 parallel; T-C019 needs T-C016–T-C018
-- **Phase 4 (Redaction + Client)**: T-C021 and T-C022 fully parallel, can start after Phase 1
+- **Phase 3 (Guardrails)**: Starts in parallel with Phase 2 — no dependency between them; T-C006/T-C006a prepare uv dependencies; T-C016–T-C018 can run in parallel; T-C019a schemas should be created before or with T-C019; T-C019b tests follow T-C019; T-C020 needs T-C006a and T-C019.
+- **Phase 4 (Redaction + Client)**: T-C021-deps must complete before T-C021/T-C021b; T-C021a extends T-C021; T-C021c documents Owner B integration; T-C022 needs Owner A API settings exposing `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN`; T-C022a follows T-C022.
 - **Phase 5 (Red-team)**: Needs full stack running (Owner A Phase 2 + Owner B Phase 3 + Phase 3 here)
 - **Phase 6 (Evals)**: Needs Phase 2 and Phase 3 complete
 - **Phase 7 (Tracing)**: Fully parallel after Phase 1
@@ -145,9 +157,14 @@ macro-F1 ≥ 0.70 reported.
 
 | This task | Depends on |
 |-----------|------------|
-| T-C022 (guardrails_client.py) | Owner A: `api/app/core/config.py` (for service token) |
+| T-C022 (guardrails_client.py) | Owner A: API settings must expose `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN` |
 | T-C024 (red-team test) | Owner A Phase 2 (DB + RLS) + Owner B Phase 3 (chat endpoint) |
 | T-C026 (redaction eval) | Owner B T-B026 (chat endpoint) |
+| T-C021c (redaction integration contract) | Owner B: `api/app/api/chat/messages.py` must call `redact()` before DB/Redis/logs/traces |
+| T-C019b (sidecar unit tests) | No external dependency |
+| T-C021a/T-C021b (custom recognizers + tests) | No external dependency |
+| T-C022a (guardrails client tests) | T-C022 complete; integration variant needs running guardrails container |
+
 
 ### Owner C Blocks
 
@@ -181,14 +198,13 @@ T-C015 Dockerfile
 
 ### Phase 3 — fully internal parallel
 
-```
+```text
 T-C016 config.yml           ─┐
-T-C017 platform_rails.co    ─┤ parallel
+T-C017 platform_rails.co    ├─→ T-C019a schemas → T-C019 main.py → T-C019b tests → T-C020 Dockerfile
 T-C018 tenant_rails.py      ─┘
-→ T-C019 main.py (needs all three)
-→ T-C020 Dockerfile
-```
 
+T-C006/T-C006a deps+lock must exist before T-C020
+```
 ---
 
 ## Implementation Strategy
