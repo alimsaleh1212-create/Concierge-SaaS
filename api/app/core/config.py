@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     MINIO_ENDPOINT: str = ""
     MINIO_ACCESS_KEY: str = ""
     MINIO_SECRET_KEY: str = ""
+    MODELSERVER_BASE_URL: str = "http://modelserver:8001"
+    GUARDRAILS_BASE_URL: str = "http://guardrails:8002"
     MODELSERVER_SERVICE_TOKEN: str = ""
     GUARDRAILS_SERVICE_TOKEN: str = ""
     JWT_SECRET: str = ""
