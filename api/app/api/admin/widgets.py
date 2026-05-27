@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_db, set_tenant_context
 from app.repositories.base import BaseRepository
 from app.models.widget import Widget
 from app.services.auth_service import require_role
@@ -43,8 +43,10 @@ async def list_widgets(
     current_user: dict = Depends(_tenant_admin),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
+    tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = _widget_repo(session)
-    widgets = await repo.all(_tenant_id(current_user))
+    widgets = await repo.all(tid)
     return {
         "widgets": [
             {"id": str(w.id), "name": w.name, "is_active": w.is_active}
@@ -60,6 +62,7 @@ async def create_widget(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = _widget_repo(session)
     widget = await repo.create({
         "tenant_id": tid,
@@ -81,6 +84,7 @@ async def update_widget(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = _widget_repo(session)
     data = {k: v for k, v in body.model_dump().items() if v is not None}
     widget = await repo.update(widget_id, data, tid)
@@ -97,6 +101,7 @@ async def get_snippet(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = _widget_repo(session)
     widget = await repo.get(widget_id, tid)
     if widget is None:
