@@ -5,7 +5,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_db, set_tenant_context
 from app.repositories.cms_repo import CmsRepository
 from app.services import cms_service
 from app.services.auth_service import require_role
@@ -38,8 +38,10 @@ async def list_cms(
     current_user: dict = Depends(_tenant_admin),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
+    tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = CmsRepository(session)
-    items = await repo.list_active(_tenant_id(current_user))
+    items = await repo.list_active(tid)
     return {
         "items": [
             {
@@ -61,6 +63,7 @@ async def create_cms(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     content = await cms_service.create_content(
         session,
         tid,
@@ -80,6 +83,7 @@ async def update_cms(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     data = {k: v for k, v in body.model_dump().items() if v is not None}
     content = await cms_service.update_content(session, content_id, tid, data, background_tasks)
     if content is None:
@@ -95,6 +99,7 @@ async def delete_cms(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     deleted = await cms_service.soft_delete_content(session, content_id, tid)
     if not deleted:
         raise HTTPException(status_code=404, detail="Content not found")

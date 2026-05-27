@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_db, set_tenant_context
 from app.repositories.lead_repo import LeadRepository
 from app.services.auth_service import require_role
 
@@ -31,6 +31,7 @@ async def list_leads(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = LeadRepository(session)
     if status:
         leads = await repo.list_by_status(tid, status)
@@ -60,6 +61,7 @@ async def update_lead_status(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     tid = _tenant_id(current_user)
+    await set_tenant_context(session, tid)
     repo = LeadRepository(session)
     lead = await repo.update_status(lead_id, body.status, tid)
     if lead is None:

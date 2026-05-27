@@ -66,21 +66,29 @@ class _LazySessionLocal:
 AsyncSessionLocal = _LazySessionLocal()
 
 
-async def get_db(tenant_id: str = "") -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency that yields a session with app.tenant_id set for RLS.
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency that yields a session and resets the RLS context after every request.
 
-    The finally block ALWAYS resets app.tenant_id to '' — a pooled connection
-    that retains a stale tenant_id is a cross-tenant breach.
+    Routes must call set_tenant_context(session, tenant_id) explicitly after obtaining
+    the session — tenant_id must always come from the verified JWT, never from query
+    params or the request body (FR-014, Constitution I).
     """
     async with AsyncSessionLocal() as session:
         try:
-            if tenant_id:
-                await session.execute(
-                    text("SELECT set_config('app.tenant_id', :tid, true)"),
-                    {"tid": tenant_id},
-                )
             yield session
         finally:
             await session.execute(
                 text("SELECT set_config('app.tenant_id', '', true)")
             )
+
+
+async def set_tenant_context(session: AsyncSession, tenant_id) -> None:
+    """Set app.tenant_id for RLS on the current session.
+
+    Must be called once per tenant-scoped request, after extracting tenant_id
+    from the verified JWT.  The finally block in get_db resets it at request end.
+    """
+    await session.execute(
+        text("SELECT set_config('app.tenant_id', :tid, true)"),
+        {"tid": str(tenant_id)},
+    )

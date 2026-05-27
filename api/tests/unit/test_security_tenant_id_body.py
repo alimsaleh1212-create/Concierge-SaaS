@@ -19,11 +19,16 @@ def _make_widget_token(tenant_id: str, widget_id: str, session_id: str, secret: 
     return jwt.encode(payload, secret, algorithm="HS256")
 
 
+class FakeSettings:
+    JWT_SECRET = "test-secret-for-unit-test"
+
+
 def test_verify_widget_token_raises_403_on_tenant_mismatch():
     """A valid Tenant A JWT with Tenant B body tenant_id must raise HTTP 403."""
     from app.core.security import verify_widget_token
+    from app.core import security as sec_mod
 
-    secret = "test-secret-for-unit-test"
+    secret = FakeSettings.JWT_SECRET
     tenant_a = str(uuid.uuid4())
     tenant_b = str(uuid.uuid4())
     widget_id = str(uuid.uuid4())
@@ -33,13 +38,6 @@ def test_verify_widget_token_raises_403_on_tenant_mismatch():
 
     with pytest.raises(HTTPException) as exc_info:
         with pytest.MonkeyPatch().context() as mp:
-            # Patch the secret used in verify_widget_token
-            from app.core import security as sec_mod
-            original = sec_mod.get_settings
-
-            class FakeSettings:
-                ANTHROPIC_API_KEY = secret
-
             mp.setattr(sec_mod, "get_settings", lambda: FakeSettings())
             verify_widget_token(token, tenant_b)  # body says tenant_b, JWT says tenant_a
 
@@ -49,18 +47,14 @@ def test_verify_widget_token_raises_403_on_tenant_mismatch():
 def test_verify_widget_token_succeeds_on_tenant_match():
     """A valid JWT where tenant_id matches the body must succeed (no exception)."""
     from app.core.security import verify_widget_token
+    from app.core import security as sec_mod
 
-    secret = "test-secret-for-unit-test"
+    secret = FakeSettings.JWT_SECRET
     tenant_id = str(uuid.uuid4())
     widget_id = str(uuid.uuid4())
     session_id = "test-session"
 
     token = _make_widget_token(tenant_id, widget_id, session_id, secret)
-
-    from app.core import security as sec_mod
-
-    class FakeSettings:
-        ANTHROPIC_API_KEY = secret
 
     with pytest.MonkeyPatch().context() as mp:
         mp.setattr(sec_mod, "get_settings", lambda: FakeSettings())
@@ -74,9 +68,6 @@ def test_verify_widget_token_raises_401_on_invalid_token():
     """A garbage token must raise HTTP 401."""
     from app.core.security import verify_widget_token
     from app.core import security as sec_mod
-
-    class FakeSettings:
-        ANTHROPIC_API_KEY = "any-secret"
 
     with pytest.MonkeyPatch().context() as mp:
         mp.setattr(sec_mod, "get_settings", lambda: FakeSettings())

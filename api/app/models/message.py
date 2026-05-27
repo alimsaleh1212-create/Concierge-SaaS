@@ -19,5 +19,6 @@ class Message(Base):
     role: Mapped[str] = mapped_column(MessageRole, nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     is_redacted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_deleted: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)

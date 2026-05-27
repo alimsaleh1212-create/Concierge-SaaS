@@ -131,7 +131,7 @@ work end-to-end from first `docker compose up`.
 - [x] T-A032 [P] Create `GET /health` endpoint returning `{"status":"ok","version":"0.1.0"}` — no auth required — in `api/app/api/__init__.py` or `api/main.py`
 - [x] T-A033 [P] Create `api/main.py`: FastAPI app factory; include all routers (`platform`, `admin`, `chat`, `auth`); mount Prometheus metrics at `/metrics`; register RLS event listener on app startup
 - [x] T-A034 [P] Create `api/Dockerfile`: multi-stage build, no torch, final image based on `python:3.12-slim`; copy only `app/` and `requirements.txt`; run `alembic upgrade head` as entrypoint pre-hook; target < 500 MB
-- [ ] T-A035 Run `quickstart.md` full smoke test: fresh `docker compose up --build`, seed both tenants, hit `/health` on all three services, verify both demo tenant admins can log in
+- [x] T-A035 Run `quickstart.md` full smoke test: fresh `docker compose up --build`, seed both tenants, hit `/health` on all three services, verify both demo tenant admins can log in
 
 ---
 

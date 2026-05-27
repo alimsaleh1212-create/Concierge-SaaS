@@ -1,7 +1,7 @@
 # ── Stage 1: dependency builder ───────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
-WORKDIR /build
+WORKDIR /app
 
 RUN pip install --no-cache-dir uv==0.4.*
 
@@ -17,11 +17,12 @@ WORKDIR /app
 RUN addgroup --system concierge && adduser --system --ingroup concierge concierge
 
 # Copy only the installed packages from builder
-COPY --from=builder /build/.venv /app/.venv
+COPY --from=builder /app/.venv /app/.venv
 
 # Copy application code (no torch, no notebooks, no tests)
 COPY app/ ./app/
 COPY alembic/ ./alembic/
+COPY seeds/ ./seeds/
 COPY alembic.ini ./
 COPY main.py ./
 
