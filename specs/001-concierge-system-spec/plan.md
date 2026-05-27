@@ -30,8 +30,9 @@ embeddings use the Voyage hosted API. No torch or transformers in any container.
 
 **Primary Dependencies**:
 - API: FastAPI 0.115+, SQLAlchemy 2.x, Alembic, fastapi-users 14+, PyJWT, anthropic SDK, voyageai SDK, redis-py, minio SDK, hvac (Vault)
+- API redaction: presidio-analyzer, presidio-anonymizer, spacy
 - Modelserver: onnxruntime, scikit-learn, numpy, FastAPI (no torch)
-- Guardrails: nemo-guardrails, presidio-analyzer, presidio-anonymizer, FastAPI
+- Guardrails: nemo-guardrails, FastAPI
 - Widget: Vite 5+, React 18, TypeScript
 - Admin: Streamlit 1.35+
 - Evals: ragas, pytest, pytest-asyncio
@@ -188,12 +189,12 @@ api/                          # FastAPI backend (Owners A, B, C)
 modelserver/                  # Owner C — lean classifier (no torch)
 ├── app/
 │   ├── main.py               # FastAPI app
-│   ├── classifier.py         # Load ONNX or joblib artifact
-│   └── startup.py            # SHA-256 boot check
-├── artifacts/                # ONNX / joblib files (not in git — fetched at build)
-├── model_card.md
-├── requirements.txt          # onnxruntime, scikit-learn, numpy only
-└── Dockerfile
+│   ├── classifier.py         # Load TF-IDF + Logistic Regression joblib artifact
+│   └── startup.py            #  Verify joblib SHA-256 against artifacts/model_card.md at boot
+├── artifacts/                # Joblib model artifact only (not in git — fetched/copied at build)
+├── model_card.md             #Human-facing summary: task, dataset, ML/DL/LLM comparison, final choice
+├── pyproject.toml           # uv-managed dependencies: fastapi, uvicorn, scikit-learn, joblib, numpy
+└── Dockerfile                # Lean modelserver image, no torch, no transformers, no ONNX needed
 
 guardrails/                   # Owner C — NeMo sidecar
 ├── app/
@@ -203,7 +204,8 @@ guardrails/                   # Owner C — NeMo sidecar
 │       └── tenant_rails.py   # Dynamic tenant topic injection
 ├── config/
 │   └── config.yml
-├── requirements.txt
+├── pyproject.toml
+├── uv.lock
 └── Dockerfile
 
 widget/                       # Owner D — Vite + React

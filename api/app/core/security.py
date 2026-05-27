@@ -1,9 +1,18 @@
 from dataclasses import dataclass
 
+import bcrypt
 import jwt
 from fastapi import HTTPException, status
 
 from app.core.config import get_settings
+
+
+def get_password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
 @dataclass
@@ -27,7 +36,7 @@ def verify_admin_token(token: str) -> TokenClaims:
     try:
         payload = jwt.decode(
             token,
-            settings.ANTHROPIC_API_KEY,  # placeholder — fastapi-users uses its own secret
+            settings.JWT_SECRET,
             algorithms=["HS256"],
             options={"verify_exp": True},
         )
@@ -51,7 +60,7 @@ def verify_widget_token(token: str, body_tenant_id: str) -> WidgetTokenClaims:
     try:
         payload = jwt.decode(
             token,
-            settings.ANTHROPIC_API_KEY,  # real secret injected per widget at token-exchange time
+            settings.JWT_SECRET,
             algorithms=["HS256"],
             options={"verify_exp": True},
         )

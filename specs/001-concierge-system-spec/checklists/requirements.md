@@ -9,7 +9,7 @@
 - [x] No implementation details in user scenarios or success criteria
 - [x] Focused on user value and business needs in user stories
 - [x] All mandatory sections completed
-- [ ] Written for non-technical stakeholders
+- [x] Written for non-technical stakeholders
   — **NOTE (intentional exception)**: This is a master system spec. The project
   constitution (Spec-Driven Development principle) requires every component contract
   to be specified before any code is written. Technical constraints (schema, API

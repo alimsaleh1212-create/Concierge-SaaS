@@ -65,11 +65,11 @@ triggers full right-to-erasure across all stores.
 `POST /platform/tenants/{id}/invite` → verify user row + audit_log. Call
 `DELETE /platform/tenants/{id}` → verify zero rows in all tables + audit_log erasure entry.
 
-- [ ] T-A015 [US4] Create `api/app/services/tenant_service.py`: `provision_tenant(name, slug, allowed_origins) -> Tenant` — inserts `tenants` row + writes `audit_log` action=`tenant.created`; `invite_admin(tenant_id, email) -> User` — creates `users` row (role=tenant_admin, is_active=false) + writes `audit_log` action=`tenant.admin_invited`; `suspend_tenant(id) -> Tenant` — sets `is_active=false` + writes `audit_log` action=`tenant.suspended`
-- [ ] T-A016 [US4] Create `api/app/services/erasure_service.py`: `erase_tenant(tenant_id)` — executes full erasure in exact order from FR-008: Redis session keys → pgvector embeddings → MinIO blobs → Postgres rows (messages → leads → conversations → embeddings → cms_content → widgets → users → tenants) → writes `audit_log` action=`tenant.erased` LAST; raises HTTP 409 if erasure already in progress
-- [ ] T-A017 [P] [US4] Create `api/app/api/platform/tenants.py`: wire `POST /platform/tenants` (201), `POST /platform/tenants/{id}/invite` (200), `PATCH /platform/tenants/{id}/suspend` (200), `DELETE /platform/tenants/{id}` (200), `GET /platform/tenants` (200 list with cost_7d_usd + message_count_7d); all require `role=tenant_manager` JWT
-- [ ] T-A018 [P] [US4] Create `api/app/api/platform/audit.py`: wire `GET /platform/audit-log` with `?tenant_id=&limit=&offset=` query params; `tenant_manager` reads all rows; requires `role=tenant_manager` JWT
-- [ ] T-A019 [US4] Create `api/app/services/cost_service.py`: `get_cost_usage(tenant_id, days=7) -> CostUsage` — aggregates message_count and estimated cost from `messages` table; used by `GET /platform/tenants`
+- [x] T-A015 [US4] Create `api/app/services/tenant_service.py`: `provision_tenant(name, slug, allowed_origins) -> Tenant` — inserts `tenants` row + writes `audit_log` action=`tenant.created`; `invite_admin(tenant_id, email) -> User` — creates `users` row (role=tenant_admin, is_active=false) + writes `audit_log` action=`tenant.admin_invited`; `suspend_tenant(id) -> Tenant` — sets `is_active=false` + writes `audit_log` action=`tenant.suspended`
+- [x] T-A016 [US4] Create `api/app/services/erasure_service.py`: `erase_tenant(tenant_id)` — executes full erasure in exact order from FR-008: Redis session keys → pgvector embeddings → MinIO blobs → Postgres rows (messages → leads → conversations → embeddings → cms_content → widgets → users → tenants) → writes `audit_log` action=`tenant.erased` LAST; raises HTTP 409 if erasure already in progress
+- [x] T-A017 [P] [US4] Create `api/app/api/platform/tenants.py`: wire `POST /platform/tenants` (201), `POST /platform/tenants/{id}/invite` (200), `PATCH /platform/tenants/{id}/suspend` (200), `DELETE /platform/tenants/{id}` (200), `GET /platform/tenants` (200 list with cost_7d_usd + message_count_7d); all require `role=tenant_manager` JWT
+- [x] T-A018 [P] [US4] Create `api/app/api/platform/audit.py`: wire `GET /platform/audit-log` with `?tenant_id=&limit=&offset=` query params; `tenant_manager` reads all rows; requires `role=tenant_manager` JWT
+- [x] T-A019 [US4] Create `api/app/services/cost_service.py`: `get_cost_usage(tenant_id, days=7) -> CostUsage` — aggregates message_count and estimated cost from `messages` table; used by `GET /platform/tenants`
 
 **Checkpoint**: All platform routes return correct status codes. Erasure test: create tenant, add data across all tables, call DELETE, assert zero rows everywhere.
 
@@ -84,11 +84,11 @@ and configures widget appearance and guardrail topics.
 FAQ content, verify embedding is created, verify `DELETE /admin/cms/{id}` hard-deletes
 the linked embeddings row.
 
-- [ ] T-A020 [US3] Create `api/app/services/cms_service.py`: `create_content(tenant_id, data) -> CmsContent` — inserts row + triggers async embedding ingestion (fire-and-forget via background task); `update_content(id, tenant_id, data) -> CmsContent` — updates row + re-triggers embedding for changed body; `soft_delete_content(id, tenant_id)` — sets `is_deleted=true` + hard-deletes linked `embeddings` rows
-- [ ] T-A021 [US3] Create `api/app/services/auth_service.py`: `create_access_token(user) -> str` — signs JWT with fastapi-users conventions; `get_current_user(token) -> User` dependency; `require_role(role: str)` dependency factory that raises HTTP 403 on mismatch
-- [ ] T-A022 [P] [US3] Create `api/app/api/admin/cms.py`: wire `GET /admin/cms`, `POST /admin/cms` (201), `PATCH /admin/cms/{id}` (200), `DELETE /admin/cms/{id}` (200); all scope `tenant_id` from JWT — never URL/body; all require `role=tenant_admin` JWT
-- [ ] T-A023 [P] [US3] Create `api/app/api/admin/widgets.py`: wire `GET /admin/widgets`, `POST /admin/widgets` (201 — generate `widget_token_secret` server-side as 32-byte hex), `PATCH /admin/widgets/{id}` (200), `GET /admin/widgets/{id}/snippet` (returns embed HTML); all require `role=tenant_admin` JWT; `tenant_id` from JWT only
-- [ ] T-A024 [P] [US3] Create `api/app/api/admin/leads.py`: wire `GET /admin/leads` (with `?status=` filter), `PATCH /admin/leads/{id}` (status update only); require `role=tenant_admin` JWT; `tenant_id` from JWT only
+- [x] T-A020 [US3] Create `api/app/services/cms_service.py`: `create_content(tenant_id, data) -> CmsContent` — inserts row + triggers async embedding ingestion (fire-and-forget via background task); `update_content(id, tenant_id, data) -> CmsContent` — updates row + re-triggers embedding for changed body; `soft_delete_content(id, tenant_id)` — sets `is_deleted=true` + hard-deletes linked `embeddings` rows
+- [x] T-A021 [US3] Create `api/app/services/auth_service.py`: `create_access_token(user) -> str` — signs JWT with fastapi-users conventions; `get_current_user(token) -> User` dependency; `require_role(role: str)` dependency factory that raises HTTP 403 on mismatch
+- [x] T-A022 [P] [US3] Create `api/app/api/admin/cms.py`: wire `GET /admin/cms`, `POST /admin/cms` (201), `PATCH /admin/cms/{id}` (200), `DELETE /admin/cms/{id}` (200); all scope `tenant_id` from JWT — never URL/body; all require `role=tenant_admin` JWT
+- [x] T-A023 [P] [US3] Create `api/app/api/admin/widgets.py`: wire `GET /admin/widgets`, `POST /admin/widgets` (201 — generate `widget_token_secret` server-side as 32-byte hex), `PATCH /admin/widgets/{id}` (200), `GET /admin/widgets/{id}/snippet` (returns embed HTML); all require `role=tenant_admin` JWT; `tenant_id` from JWT only
+- [x] T-A024 [P] [US3] Create `api/app/api/admin/leads.py`: wire `GET /admin/leads` (with `?status=` filter), `PATCH /admin/leads/{id}` (status update only); require `role=tenant_admin` JWT; `tenant_id` from JWT only
 
 **Checkpoint**: Full admin workflow works — CMS CRUD + widget CRUD + leads list.
 `POST /admin/cms` followed by a chat message returns CMS content in the RAG answer.
@@ -102,9 +102,9 @@ the linked embeddings row.
 **Independent Test**: With two seeded tenants, use Tenant A's JWT to call any admin or
 chat route — assert zero Tenant B rows ever returned at the HTTP layer.
 
-- [ ] T-A025 [US2] Verify `api/app/core/database.py` `get_db` dependency: the `finally` block ALWAYS resets `app.tenant_id` to empty string (not NULL) after every request, even on unhandled exceptions — add integration test asserting reset in `api/tests/integration/test_rls_reset.py`
-- [ ] T-A026 [US2] Write cross-tenant isolation unit test: seed one `cms_content` row for each demo tenant; query `CmsRepository.list_active(tenant_a_id)` → assert only Tenant A row returned; repeat with Tenant B; assert ORM `.filter(tenant_id==...)` is present in query in `api/tests/unit/test_cms_repo_isolation.py`
-- [ ] T-A027 [US2] Verify `FR-014` enforcement in `verify_widget_token`: write test sending a request with valid Tenant A JWT but `tenant_id` of Tenant B in request body — assert HTTP 403 returned — in `api/tests/unit/test_security_tenant_id_body.py`
+- [x] T-A025 [US2] Verify `api/app/core/database.py` `get_db` dependency: the `finally` block ALWAYS resets `app.tenant_id` to empty string (not NULL) after every request, even on unhandled exceptions — add integration test asserting reset in `api/tests/integration/test_rls_reset.py`
+- [x] T-A026 [US2] Write cross-tenant isolation unit test: seed one `cms_content` row for each demo tenant; query `CmsRepository.list_active(tenant_a_id)` → assert only Tenant A row returned; repeat with Tenant B; assert ORM `.filter(tenant_id==...)` is present in query in `api/tests/unit/test_cms_repo_isolation.py`
+- [x] T-A027 [US2] Verify `FR-014` enforcement in `verify_widget_token`: write test sending a request with valid Tenant A JWT but `tenant_id` of Tenant B in request body — assert HTTP 403 returned — in `api/tests/unit/test_security_tenant_id_body.py`
 
 **Checkpoint**: All three isolation tests pass. RLS reset test confirms `finally` block fires on exception.
 
@@ -115,9 +115,9 @@ chat route — assert zero Tenant B rows ever returned at the HTTP layer.
 **Purpose**: Seed both demo tenants with CMS content so chat, RAG, and red-team probes
 work end-to-end from first `docker compose up`.
 
-- [ ] T-A028 Create `api/seeds/marios_pizza.py`: idempotent upsert of Mario's Pizza tenant + tenant_admin user + widget (with a localhost:3000 allowed origin) + 5 CMS items (menu, hours, delivery FAQ, location, specials) as per DECISIONS.md D-005; triggers embedding ingestion for all 5 items
-- [ ] T-A029 Create `api/seeds/lawson_partners.py`: idempotent upsert of Lawson & Partners tenant + tenant_admin user + widget + 5 CMS items (practice areas, team bios, consultation FAQ, fees, contact); triggers embedding ingestion for all 5 items
-- [ ] T-A030 Wire seed scripts to run on `docker compose up` via an API startup event or a separate `seed` Docker Compose service that exits 0 after seeding; ensure idempotency (skip if already exists)
+- [x] T-A028 Create `api/seeds/marios_pizza.py`: idempotent upsert of Mario's Pizza tenant + tenant_admin user + widget (with a localhost:3000 allowed origin) + 5 CMS items (menu, hours, delivery FAQ, location, specials) as per DECISIONS.md D-005; triggers embedding ingestion for all 5 items
+- [x] T-A029 Create `api/seeds/lawson_partners.py`: idempotent upsert of Lawson & Partners tenant + tenant_admin user + widget + 5 CMS items (practice areas, team bios, consultation FAQ, fees, contact); triggers embedding ingestion for all 5 items
+- [x] T-A030 Wire seed scripts to run on `docker compose up` via an API startup event or a separate `seed` Docker Compose service that exits 0 after seeding; ensure idempotency (skip if already exists)
 
 **Checkpoint**: Fresh `docker compose up` → both tenants reachable in DB → `GET /admin/cms` returns 5 items for each admin → RAG returns relevant answer for each tenant.
 
@@ -127,11 +127,11 @@ work end-to-end from first `docker compose up`.
 
 **Purpose**: Per-tenant rate limiting, `GET /health` endpoint, and Alembic baseline cleanup.
 
-- [ ] T-A031 Implement per-tenant rate-limiting middleware using Redis token bucket (`redis-py`, already a dep — see DECISIONS.md D-006): apply to all `/chat/messages` requests; key by `tenant_id` from JWT; placeholder thresholds — Owner A sets real values after Tuesday eval run and records in DECISIONS.md
-- [ ] T-A032 [P] Create `GET /health` endpoint returning `{"status":"ok","version":"0.1.0"}` — no auth required — in `api/app/api/__init__.py` or `api/main.py`
-- [ ] T-A033 [P] Create `api/main.py`: FastAPI app factory; include all routers (`platform`, `admin`, `chat`, `auth`); mount Prometheus metrics at `/metrics`; register RLS event listener on app startup
-- [ ] T-A034 [P] Create `api/Dockerfile`: multi-stage build, no torch, final image based on `python:3.12-slim`; copy only `app/` and `requirements.txt`; run `alembic upgrade head` as entrypoint pre-hook; target < 500 MB
-- [ ] T-A035 Run `quickstart.md` full smoke test: fresh `docker compose up --build`, seed both tenants, hit `/health` on all three services, verify both demo tenant admins can log in
+- [x] T-A031 Implement per-tenant rate-limiting middleware using Redis token bucket (`redis-py`, already a dep — see DECISIONS.md D-006): apply to all `/chat/messages` requests; key by `tenant_id` from JWT; placeholder thresholds — Owner A sets real values after Tuesday eval run and records in DECISIONS.md
+- [x] T-A032 [P] Create `GET /health` endpoint returning `{"status":"ok","version":"0.1.0"}` — no auth required — in `api/app/api/__init__.py` or `api/main.py`
+- [x] T-A033 [P] Create `api/main.py`: FastAPI app factory; include all routers (`platform`, `admin`, `chat`, `auth`); mount Prometheus metrics at `/metrics`; register RLS event listener on app startup
+- [x] T-A034 [P] Create `api/Dockerfile`: multi-stage build, no torch, final image based on `python:3.12-slim`; copy only `app/` and `requirements.txt`; run `alembic upgrade head` as entrypoint pre-hook; target < 500 MB
+- [x] T-A035 Run `quickstart.md` full smoke test: fresh `docker compose up --build`, seed both tenants, hit `/health` on all three services, verify both demo tenant admins can log in
 
 ---
 

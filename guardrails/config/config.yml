@@ -1,0 +1,21 @@
+models:
+  - type: main
+    engine: anthropic
+    model: claude-3-5-sonnet-latest
+    parameters:
+      temperature: 0.1
+
+rails:
+  input:
+    flows:
+      - platform check prompt injection
+      - platform check jailbreak
+      - platform check cross tenant extraction
+      - platform check system prompt extraction
+  output:
+    flows:
+      - platform check output cross tenant leakage
+      - platform check output system prompt leakage
+
+platform_rails:
+  colang_file: ../app/rails/platform_rails.co

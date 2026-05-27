@@ -21,32 +21,74 @@ def _make_engine():
     )
 
 
-engine = _make_engine()
-
-AsyncSessionLocal = async_sessionmaker(
-    engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-    autocommit=False,
-)
+_engine = None
+_session_local = None
 
 
-async def get_db(tenant_id: str = "") -> AsyncGenerator[AsyncSession, None]:
-    """FastAPI dependency that yields a session with app.tenant_id set for RLS.
+def _get_engine():
+    global _engine
+    if _engine is None:
+        _engine = _make_engine()
+    return _engine
 
-    The finally block ALWAYS resets app.tenant_id to '' — a pooled connection
-    that retains a stale tenant_id is a cross-tenant breach.
+
+def _get_session_local():
+    global _session_local
+    if _session_local is None:
+        _session_local = async_sessionmaker(
+            _get_engine(),
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False,
+        )
+    return _session_local
+
+
+def get_session_local():
+    """Return the sessionmaker, creating the engine on first call."""
+    return _get_session_local()
+
+
+# Kept for Alembic env.py and any code that needs a direct engine reference.
+def get_engine():
+    return _get_engine()
+
+
+# Backwards-compatible module-level name used by seeds and tests that
+# import AsyncSessionLocal directly — resolved lazily via __getattr__.
+class _LazySessionLocal:
+    """Proxy so `async with AsyncSessionLocal() as s:` works without eager init."""
+    def __call__(self, *args, **kwargs):
+        return _get_session_local()(*args, **kwargs)
+
+
+AsyncSessionLocal = _LazySessionLocal()
+
+
+async def get_db() -> AsyncGenerator[AsyncSession, None]:
+    """FastAPI dependency that yields a session and resets the RLS context after every request.
+
+    Routes must call set_tenant_context(session, tenant_id) explicitly after obtaining
+    the session — tenant_id must always come from the verified JWT, never from query
+    params or the request body (FR-014, Constitution I).
     """
     async with AsyncSessionLocal() as session:
         try:
-            if tenant_id:
-                await session.execute(
-                    text("SELECT set_config('app.tenant_id', :tid, true)"),
-                    {"tid": tenant_id},
-                )
             yield session
         finally:
             await session.execute(
                 text("SELECT set_config('app.tenant_id', '', true)")
             )
+
+
+async def set_tenant_context(session: AsyncSession, tenant_id) -> None:
+    """Set app.tenant_id for RLS on the current session.
+
+    Must be called once per tenant-scoped request, after extracting tenant_id
+    from the verified JWT.  The finally block in get_db resets it at request end.
+    """
+    await session.execute(
+        text("SELECT set_config('app.tenant_id', :tid, true)"),
+        {"tid": str(tenant_id)},
+    )
