@@ -8,6 +8,7 @@ from app import guardrails_client
 
 
 TENANT_ID = uuid.UUID("11111111-1111-1111-1111-111111111111")
+CONVERSATION_ID = uuid.UUID("22222222-2222-2222-2222-222222222222")
 BASE_URL = "http://guardrails.test:8002"
 SERVICE_TOKEN = "test-guardrails-token"
 DEFAULT_CONVERSATION_ID = "00000000-0000-0000-0000-000000000000"
@@ -16,6 +17,13 @@ DEFAULT_TENANT_RAILS = {
     "blocked_topics": [],
     "refusal_tone": None,
 }
+RETRIEVED_CHUNKS = [
+    {
+        "content_id": "33333333-3333-3333-3333-333333333333",
+        "chunk_index": 0,
+        "text": "Our restaurant is open from 9 AM to 9 PM.",
+    }
+]
 
 
 class _FakeResponse:
@@ -228,3 +236,119 @@ async def test_check_input_fails_closed_on_unavailable_or_invalid_response(respo
     blocked = await guardrails_client.check_input("What are your hours?", TENANT_ID)
 
     assert blocked is True
+
+
+@pytest.mark.asyncio
+async def test_check_retrieval_allowed_response_uses_base_url_auth_and_contract_body():
+    _FakeAsyncClient.responses = [
+        _FakeResponse(
+            200,
+            {
+                "allowed": True,
+                "filtered_chunks": RETRIEVED_CHUNKS,
+                "blocked_chunk_ids": [],
+                "reason": None,
+                "refusal_message": None,
+            },
+        )
+    ]
+
+    result = await guardrails_client.check_retrieval(
+        tenant_id=TENANT_ID,
+        conversation_id=CONVERSATION_ID,
+        query="What are your hours?",
+        chunks=RETRIEVED_CHUNKS,
+    )
+
+    assert result.allowed is True
+    assert result.filtered_chunks == RETRIEVED_CHUNKS
+    assert result.blocked_chunk_ids == []
+    assert _FakeAsyncClient.calls == [
+        {
+            "url": f"{BASE_URL}/rails/retrieval",
+            "json": {
+                "tenant_id": str(TENANT_ID),
+                "conversation_id": str(CONVERSATION_ID),
+                "query": "What are your hours?",
+                "chunks": RETRIEVED_CHUNKS,
+                "tenant_rails": DEFAULT_TENANT_RAILS,
+            },
+            "headers": {"Authorization": f"Bearer {SERVICE_TOKEN}"},
+            "timeout": 3.0,
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_check_retrieval_blocked_response_interpreted_correctly():
+    _FakeAsyncClient.responses = [
+        _FakeResponse(
+            200,
+            {
+                "allowed": False,
+                "filtered_chunks": [],
+                "blocked_chunk_ids": ["33333333-3333-3333-3333-333333333333:0"],
+                "reason": "cross_tenant_attempt",
+                "refusal_message": "I'm sorry, I can't help with that.",
+            },
+        )
+    ]
+
+    result = await guardrails_client.check_retrieval(
+        tenant_id=TENANT_ID,
+        conversation_id=CONVERSATION_ID,
+        query="What are your hours?",
+        chunks=RETRIEVED_CHUNKS,
+    )
+
+    assert result.allowed is False
+    assert result.filtered_chunks == []
+    assert result.blocked_chunk_ids == ["33333333-3333-3333-3333-333333333333:0"]
+    assert result.reason == "cross_tenant_attempt"
+
+
+@pytest.mark.asyncio
+async def test_check_retrieval_missing_service_token_fails_closed(monkeypatch):
+    monkeypatch.setattr(
+        guardrails_client,
+        "get_settings",
+        lambda: SimpleNamespace(GUARDRAILS_BASE_URL=BASE_URL, GUARDRAILS_SERVICE_TOKEN=""),
+    )
+
+    result = await guardrails_client.check_retrieval(
+        tenant_id=TENANT_ID,
+        conversation_id=CONVERSATION_ID,
+        query="What are your hours?",
+        chunks=RETRIEVED_CHUNKS,
+    )
+
+    assert result.allowed is False
+    assert result.filtered_chunks == []
+    assert _FakeAsyncClient.calls == []
+
+
+@pytest.mark.asyncio
+async def test_check_retrieval_retries_once_after_503():
+    _FakeAsyncClient.responses = [
+        _FakeResponse(503, {"detail": "unavailable"}),
+        _FakeResponse(
+            200,
+            {
+                "allowed": True,
+                "filtered_chunks": RETRIEVED_CHUNKS,
+                "blocked_chunk_ids": [],
+                "reason": None,
+                "refusal_message": None,
+            },
+        ),
+    ]
+
+    result = await guardrails_client.check_retrieval(
+        tenant_id=TENANT_ID,
+        conversation_id=CONVERSATION_ID,
+        query="What are your hours?",
+        chunks=RETRIEVED_CHUNKS,
+    )
+
+    assert result.allowed is True
+    assert len(_FakeAsyncClient.calls) == 2

@@ -8,9 +8,12 @@ from app.schemas import (
     RailsInputResponse,
     RailsOutputRequest,
     RailsOutputResponse,
+    RailsRetrievalRequest,
+    RailsRetrievalResponse,
 )
 from app.security import _require_service_token
 from app.services.platform_checks import check_platform_input, check_platform_output
+from app.services.retrieval_checks import check_retrieval
 from app.services.tenant_checks import check_tenant_input
 
 
@@ -62,3 +65,19 @@ def check_output(request: RailsOutputRequest) -> RailsOutputResponse:
         )
 
     return RailsOutputResponse(allowed=True)
+
+
+@router.post(
+    "/rails/retrieval",
+    response_model=RailsRetrievalResponse,
+    dependencies=[Depends(_require_service_token)],
+)
+def check_retrieval_chunks(request: RailsRetrievalRequest) -> RailsRetrievalResponse:
+    result = check_retrieval(request)
+    return RailsRetrievalResponse(
+        allowed=result.allowed,
+        filtered_chunks=result.filtered_chunks,
+        blocked_chunk_ids=result.blocked_chunk_ids,
+        reason=result.reason,
+        refusal_message=result.refusal_message,
+    )
