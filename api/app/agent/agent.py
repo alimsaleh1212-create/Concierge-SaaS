@@ -55,7 +55,11 @@ class ToolCallingAgent:
         self.tenant_ctx = tenant_ctx
         self.session = session
         self._tools = {
-            "rag_search": RagSearchTool(tenant_ctx.tenant_id, session),
+            "rag_search": RagSearchTool(
+                tenant_id=tenant_ctx.tenant_id,
+                session=session,
+                conversation_id=tenant_ctx.conversation_id,
+            ),
             "capture_lead": CaptureLeadTool(
                 tenant_ctx.tenant_id,
                 tenant_ctx.conversation_id,
