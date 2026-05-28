@@ -17,10 +17,6 @@ env/
 !.env.example
 
 # ML artifacts (fetched at build time — never committed)
-*.joblib
-*.onnx
-*.pkl
-*.model
 
 # Vault data
 vault-data/
