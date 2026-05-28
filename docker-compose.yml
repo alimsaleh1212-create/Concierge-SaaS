@@ -115,7 +115,7 @@ services:
       vault-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
       interval: 10s
       timeout: 5s
       retries: 12
@@ -136,7 +136,7 @@ services:
       vault-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8001/health').status==200 else 1)"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -156,7 +156,7 @@ services:
       vault-init:
         condition: service_completed_successfully
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8002/health').status==200 else 1)"]
       interval: 10s
       timeout: 5s
       retries: 10
@@ -174,6 +174,27 @@ services:
     entrypoint: ["sh", "-c", "python -m seeds.marios_pizza && python -m seeds.lawson_partners"]
     restart: "no"
 
+  widget-build:
+    image: node:20-alpine
+    working_dir: /widget
+    environment:
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: concierge-widget
+    entrypoint:
+      - sh
+      - -c
+      - "wget -q https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc && chmod +x /usr/local/bin/mc && npm ci --silent && npm run build && sh scripts/upload-bundle.sh"
+    volumes:
+      - ./widget:/widget
+    depends_on:
+      minio:
+        condition: service_healthy
+      vault-init:
+        condition: service_completed_successfully
+    restart: "no"
+
   admin:
     build:
       context: ./admin
@@ -188,7 +209,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8501/_stcore/health').status==200 else 1)"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -5,8 +5,8 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir uv==0.4.*
 
-COPY pyproject.toml ./
-RUN uv sync --no-dev --no-install-project && \
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project && \
     /app/.venv/bin/python -m spacy download en_core_web_md
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
