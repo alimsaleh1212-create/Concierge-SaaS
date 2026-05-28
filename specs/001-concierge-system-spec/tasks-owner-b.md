@@ -168,6 +168,7 @@ no `0.00` placeholder values for Owner B's gates.
 - [ ] T-B043 Document the routing confidence threshold (value of "high confidence") and justify it in `DECISIONS.md`
 - [ ] T-B044 Validate all four prompt files load correctly at API startup and raise a clear error if any are missing in `api/app/core/config.py`
 - [ ] T-B045 Run `quickstart.md` validation: full smoke test from fresh clone — one chat round-trip completes, both tenants reachable, RAG returns correct tenant's content
+- [ ] T-B046 [US1/US2] Wire Retriever Rails into RAG context construction: after `retrieve(...)` returns chunks and before building the LLM prompt/tool result, call Owner C’s retrieval guardrail helper; block/filter unsafe chunks before they enter `{{context}}` or tool output.
 
 ---
 

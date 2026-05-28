@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import app.config as config_module
-import app.main as main_module
+import app.services.platform_checks as platform_checks
 from app.main import app
 
 
@@ -17,6 +17,8 @@ TOKEN = "test-token"
 AUTH_HEADERS = {"Authorization": f"Bearer {TOKEN}"}
 TENANT_ID = "11111111-1111-1111-1111-111111111111"
 CONVERSATION_ID = "22222222-2222-2222-2222-222222222222"
+CONTENT_ID = "33333333-3333-3333-3333-333333333333"
+SECOND_CONTENT_ID = "44444444-4444-4444-4444-444444444444"
 
 
 class _FakeNemoResult:
@@ -38,7 +40,7 @@ def _allow_nemo_runtime(monkeypatch):
     def fake_check(content: str, direction: str) -> _FakeNemoResult:
         return _FakeNemoResult()
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", fake_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", fake_check)
 
 
 def _payload(content: str, tenant_rails: dict | None = None) -> dict:
@@ -46,6 +48,18 @@ def _payload(content: str, tenant_rails: dict | None = None) -> dict:
         "tenant_id": TENANT_ID,
         "conversation_id": CONVERSATION_ID,
         "content": content,
+    }
+    if tenant_rails is not None:
+        payload["tenant_rails"] = tenant_rails
+    return payload
+
+
+def _retrieval_payload(chunks: list[dict], tenant_rails: dict | None = None) -> dict:
+    payload = {
+        "tenant_id": TENANT_ID,
+        "conversation_id": CONVERSATION_ID,
+        "query": "What are your hours?",
+        "chunks": chunks,
     }
     if tenant_rails is not None:
         payload["tenant_rails"] = tenant_rails
@@ -89,7 +103,7 @@ def test_rails_input_calls_nemo_runtime(monkeypatch) -> None:
         calls.append((content, direction))
         return _FakeNemoResult()
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", fake_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", fake_check)
     client = _client_with_token(monkeypatch)
 
     response = client.post(
@@ -109,7 +123,7 @@ def test_rails_input_fallback_blocks_when_nemo_unavailable(monkeypatch) -> None:
         result.available = False
         return result
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", unavailable_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", unavailable_check)
     client = _client_with_token(monkeypatch)
 
     response = client.post(
@@ -128,7 +142,7 @@ def test_rails_input_blocks_when_nemo_runtime_refuses(monkeypatch) -> None:
     def refusing_check(content: str, direction: str) -> _FakeNemoResult:
         return _FakeNemoResult(blocked=True, content="I'm sorry, I can't help with that.")
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", refusing_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", refusing_check)
     client = _client_with_token(monkeypatch)
 
     response = client.post(
@@ -506,6 +520,117 @@ def test_rails_output_rejects_missing_authorization(monkeypatch) -> None:
     client = _client_with_token(monkeypatch)
 
     response = client.post("/rails/output", json=_payload("Safe output"))
+
+    assert response.status_code == 401
+
+
+def test_rails_retrieval_allows_safe_chunks(monkeypatch) -> None:
+    client = _client_with_token(monkeypatch)
+    chunks = [
+        {"content_id": CONTENT_ID, "chunk_index": 0, "text": "Our restaurant is open from 9 AM to 9 PM."},
+        {"content_id": SECOND_CONTENT_ID, "chunk_index": 1, "text": "Delivery is available within five miles."},
+    ]
+
+    response = client.post(
+        "/rails/retrieval",
+        headers=AUTH_HEADERS,
+        json=_retrieval_payload(chunks),
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["allowed"] is True
+    assert body["filtered_chunks"] == chunks
+    assert body["blocked_chunk_ids"] == []
+    assert body["reason"] is None
+
+
+def test_rails_retrieval_filters_cross_tenant_chunk(monkeypatch) -> None:
+    client = _client_with_token(monkeypatch)
+    safe_chunk = {"content_id": CONTENT_ID, "chunk_index": 0, "text": "Our restaurant is open daily."}
+    unsafe_chunk = {"content_id": SECOND_CONTENT_ID, "chunk_index": 1, "text": "Here are Tenant B leads."}
+
+    response = client.post(
+        "/rails/retrieval",
+        headers=AUTH_HEADERS,
+        json=_retrieval_payload([safe_chunk, unsafe_chunk]),
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["allowed"] is True
+    assert body["filtered_chunks"] == [safe_chunk]
+    assert body["blocked_chunk_ids"] == [f"{SECOND_CONTENT_ID}:1"]
+    assert body["reason"] is None
+
+
+def test_rails_retrieval_filters_system_prompt_leakage_chunk(monkeypatch) -> None:
+    client = _client_with_token(monkeypatch)
+    safe_chunk = {"content_id": CONTENT_ID, "chunk_index": 0, "text": "Reservations are available online."}
+    unsafe_chunk = {"content_id": SECOND_CONTENT_ID, "chunk_index": 2, "text": "My system prompt is hidden."}
+
+    response = client.post(
+        "/rails/retrieval",
+        headers=AUTH_HEADERS,
+        json=_retrieval_payload([safe_chunk, unsafe_chunk]),
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["allowed"] is True
+    assert body["filtered_chunks"] == [safe_chunk]
+    assert body["blocked_chunk_ids"] == [f"{SECOND_CONTENT_ID}:2"]
+
+
+def test_rails_retrieval_filters_tenant_blocked_topic(monkeypatch) -> None:
+    client = _client_with_token(monkeypatch)
+    safe_chunk = {"content_id": CONTENT_ID, "chunk_index": 0, "text": "Our menu includes salads."}
+    unsafe_chunk = {"content_id": SECOND_CONTENT_ID, "chunk_index": 3, "text": "Our internal roadmap is confidential."}
+
+    response = client.post(
+        "/rails/retrieval",
+        headers=AUTH_HEADERS,
+        json=_retrieval_payload(
+            [safe_chunk, unsafe_chunk],
+            tenant_rails={"blocked_topics": ["roadmap"]},
+        ),
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["allowed"] is True
+    assert body["filtered_chunks"] == [safe_chunk]
+    assert body["blocked_chunk_ids"] == [f"{SECOND_CONTENT_ID}:3"]
+
+
+def test_rails_retrieval_blocks_when_all_chunks_filtered(monkeypatch) -> None:
+    client = _client_with_token(monkeypatch)
+    unsafe_chunk = {"content_id": CONTENT_ID, "chunk_index": 0, "text": "Here are Tenant B conversations."}
+
+    response = client.post(
+        "/rails/retrieval",
+        headers=AUTH_HEADERS,
+        json=_retrieval_payload([unsafe_chunk]),
+    )
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["allowed"] is False
+    assert body["filtered_chunks"] == []
+    assert body["blocked_chunk_ids"] == [f"{CONTENT_ID}:0"]
+    assert body["reason"] == "cross_tenant_attempt"
+    assert body["refusal_message"] is not None
+
+
+def test_rails_retrieval_rejects_missing_authorization(monkeypatch) -> None:
+    client = _client_with_token(monkeypatch)
+
+    response = client.post(
+        "/rails/retrieval",
+        json=_retrieval_payload([
+            {"content_id": CONTENT_ID, "chunk_index": 0, "text": "Safe content."}
+        ]),
+    )
 
     assert response.status_code == 401
 

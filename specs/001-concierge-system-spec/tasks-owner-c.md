@@ -89,7 +89,7 @@ PII redaction tasks (T-C021/T-C021a/T-C021b/T-C021c) moved to Owner A (Phase 8).
 - [x] T-C021-deps [P] [US1] API runtime dependencies include `presidio-analyzer`, `presidio-anonymizer`, `spacy` — completed by Owner A.
 - [ ] T-C022 [P] [US1] Create `api/app/guardrails_client.py`: async HTTP client for the guardrails sidecar; consume `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN` from API settings provided by Owner A; expected internal URL is `http://guardrails:8002`; send `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>`; expose `check_input(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult` and `check_output(...)`; retry on 503.
 - [ ] T-C022a [P] [US1] Create tests for `api/app/guardrails_client.py`: assert `GUARDRAILS_BASE_URL` is used, `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` is sent, and mock `httpx.AsyncClient` responses for allowed, blocked, missing/invalid token, bad payload, and `503` retry behavior; include one integration test against a running `guardrails` container when available.
-
+- [ ] T-C022b [US1/US2] Define and test Retriever Rails contract/client: add retrieval guardrail request/response schemas, sidecar endpoint/client helper, and tests for blocking unsafe retrieved chunks before they enter LLM context. Coordinate Owner B wiring into `_rag_workflow` and `RagSearchTool.__call__`.
 **Checkpoint**: Guardrails client integration test passes against running sidecar container.
 
 ---
