@@ -9,7 +9,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 import app.config as config_module
-import app.main as main_module
+import app.services.platform_checks as platform_checks
 from app.main import app
 
 
@@ -38,7 +38,7 @@ def _allow_nemo_runtime(monkeypatch):
     def fake_check(content: str, direction: str) -> _FakeNemoResult:
         return _FakeNemoResult()
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", fake_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", fake_check)
 
 
 def _payload(content: str, tenant_rails: dict | None = None) -> dict:
@@ -89,7 +89,7 @@ def test_rails_input_calls_nemo_runtime(monkeypatch) -> None:
         calls.append((content, direction))
         return _FakeNemoResult()
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", fake_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", fake_check)
     client = _client_with_token(monkeypatch)
 
     response = client.post(
@@ -109,7 +109,7 @@ def test_rails_input_fallback_blocks_when_nemo_unavailable(monkeypatch) -> None:
         result.available = False
         return result
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", unavailable_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", unavailable_check)
     client = _client_with_token(monkeypatch)
 
     response = client.post(
@@ -128,7 +128,7 @@ def test_rails_input_blocks_when_nemo_runtime_refuses(monkeypatch) -> None:
     def refusing_check(content: str, direction: str) -> _FakeNemoResult:
         return _FakeNemoResult(blocked=True, content="I'm sorry, I can't help with that.")
 
-    monkeypatch.setattr(main_module, "_run_nemo_platform_check", refusing_check)
+    monkeypatch.setattr(platform_checks, "run_nemo_platform_check", refusing_check)
     client = _client_with_token(monkeypatch)
 
     response = client.post(
