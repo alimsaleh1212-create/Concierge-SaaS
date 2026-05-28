@@ -25,6 +25,9 @@ env/
 # Vault data
 vault-data/
 
+# Dev-only compose override (each developer keeps their own)
+docker-compose.override.yml
+
 # Node.js / Widget
 node_modules/
 dist/
