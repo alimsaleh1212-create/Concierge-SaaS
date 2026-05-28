@@ -12,6 +12,7 @@ from app.agent.router import validate_prompts
 from app.api.auth import widget_token as auth_widget_token
 from app.api.chat import messages as chat_messages
 from app.core.config import get_settings
+from app.core.tracing import setup_tracing
 from app.middleware.rate_limit import TenantRateLimitMiddleware
 
 
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Concierge API", version="0.1.0", lifespan=lifespan)
+    setup_tracing(app)
 
     # ── Routers ────────────────────────────────────────────────────────────────
     app.include_router(platform_tenants.router)
