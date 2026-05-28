@@ -81,25 +81,16 @@ cross-tenant attempts, and jailbreak — while passing normal messages.
 
 ---
 
-## Phase 4: PII Redaction & Guardrails Client (User Story 1 + 2)
+## Phase 4: Guardrails Client (User Story 1 + 2)
 
-**Goal**: Presidio redacts PII from all messages before logs/traces/Redis/LLM.
-The API's guardrails_client wires the sidecar into the chat flow.
+**Goal**: The API's guardrails_client wires the sidecar into the chat flow.
+PII redaction tasks (T-C021/T-C021a/T-C021b/T-C021c) moved to Owner A (Phase 8).
 
-**Independent Test**: Pass a string containing a synthetic API key to `redact(text)` →
-assert the key is replaced with `<API_KEY>`. Pass `admin@example.com` → assert
-`<EMAIL_ADDRESS>` in output.
-- [ ] T-C021-deps [P] [US1] Ensure API runtime dependencies include `presidio-analyzer`, `presidio-anonymizer`, and `spacy` for `api/app/redaction.py`; do not add these only to the guardrails sidecar if redaction runs in the API process.
-- [ ] T-C021 [P] [US1] Create `api/app/redaction.py`: Presidio `AnalyzerEngine` + `AnonymizerEngine` wrapper; `redact(text: str) -> RedactionResult` that replaces these entity types: `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CRYPTO`, `API_KEY`, `US_SSN`, `IP_ADDRESS`, `PASSWORD`; `is_redacted: bool` flag on result
-- [ ] T-C021a [P] [US1] Add custom Presidio recognizers in `api/app/redaction.py` for `API_KEY` and `PASSWORD`, because default Presidio detection may not reliably catch project-specific fake keys such as `sk-test-1234567890abcdef` or strings like `password=secret123`.
-
-- [ ] T-C021b [P] [US1] Create unit tests for `api/app/redaction.py`: assert emails, phone numbers, credit cards, IP addresses, API keys, and password-like strings are replaced with the expected placeholders and that `RedactionResult.is_redacted` is true only when content changed.
-
-- [ ] T-C021c [US1] Document the redaction integration contract for Owner B: `redact()` must be called before writing user/model text to the `messages` table, Redis session memory, logs, or traces. Owner C provides the helper and tests; Owner B wires it inside `api/app/api/chat/messages.py`.
+- [x] T-C021-deps [P] [US1] API runtime dependencies include `presidio-analyzer`, `presidio-anonymizer`, `spacy` — completed by Owner A.
 - [ ] T-C022 [P] [US1] Create `api/app/guardrails_client.py`: async HTTP client for the guardrails sidecar; consume `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN` from API settings provided by Owner A; expected internal URL is `http://guardrails:8002`; send `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>`; expose `check_input(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult` and `check_output(...)`; retry on 503.
 - [ ] T-C022a [P] [US1] Create tests for `api/app/guardrails_client.py`: assert `GUARDRAILS_BASE_URL` is used, `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` is sent, and mock `httpx.AsyncClient` responses for allowed, blocked, missing/invalid token, bad payload, and `503` retry behavior; include one integration test against a running `guardrails` container when available.
 
-**Checkpoint**: `redact("My email is foo@bar.com and my key is sk-abc123")` returns both entities anonymized. Guardrails client integration test passes against running sidecar container.
+**Checkpoint**: Guardrails client integration test passes against running sidecar container.
 
 ---
 
@@ -174,7 +165,6 @@ macro-F1 ≥ 0.70 reported.
 |----------------|--------|
 | T-C014 (modelserver running) | Owner B T-B008 (modelserver client) |
 | T-C019 (guardrails running) | Owner B T-B026 (chat endpoint rails calls) |
-| T-C021 (redaction.py) | Owner B T-B026 (chat endpoint PII redaction) |
 | T-C022 (guardrails_client.py) | Owner B T-B026 (guardrails integration) |
 
 ---

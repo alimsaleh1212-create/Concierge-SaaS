@@ -135,6 +135,24 @@ work end-to-end from first `docker compose up`.
 
 ---
 
+## Phase 8: PII Redaction (User Story 1)
+
+**Purpose**: Presidio-backed redaction module inside the API container. Moved from Owner C
+(T-C021 series) — Owner A owns the API container, deps, and Dockerfile.
+
+**Independent Test**: `redact("My email is foo@bar.com and my key is sk-test-1234567890abcdef")`
+→ both entities replaced, `is_redacted=True`. Plain text → `is_redacted=False`.
+
+- [x] T-C021-deps [P] [US1] Add `presidio-analyzer>=2.2`, `presidio-anonymizer>=2.2`, `spacy>=3.7` to `api/pyproject.toml`; download `en_core_web_md` in `api/Dockerfile` builder stage — completed.
+- [ ] T-C021 [P] [US1] Create `api/app/redaction.py`: Presidio `AnalyzerEngine` + `AnonymizerEngine` wrapper; `redact(text: str) -> RedactionResult` replacing entity types `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CRYPTO`, `API_KEY`, `US_SSN`, `IP_ADDRESS`, `PASSWORD`; `is_redacted: bool` flag on result.
+- [ ] T-C021a [P] [US1] Add custom Presidio recognizers in `api/app/redaction.py` for `API_KEY` (pattern: `sk-[a-zA-Z0-9]{16,}`) and `PASSWORD` (pattern: `(?i)password\s*[=:]\s*\S+`) — default Presidio does not catch these reliably.
+- [ ] T-C021b [P] [US1] Create `api/tests/unit/test_redaction.py`: assert emails, phone numbers, credit cards, IP addresses, API keys (`sk-test-1234567890abcdef`), and password strings (`password=secret123`) are replaced; assert `is_redacted=True` only when content changed.
+- [ ] T-C021c [US1] Integration note for Owner B: `redact()` must be called before writing user/model text to the `messages` table, Redis session, logs, or traces; Owner A provides the helper; Owner B wires it in `api/app/api/chat/messages.py`.
+
+**Checkpoint**: `pytest api/tests/unit/test_redaction.py -v` — all entity-type and `is_redacted` assertions pass.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -154,6 +172,7 @@ work end-to-end from first `docker compose up`.
 | T-A009 (Alembic migration) | Owner B T-B005, T-B007 |
 | T-A005 (database.py + RLS) | Owner B T-B026 (chat endpoint) |
 | T-A033 (api/main.py) | Owner D smoke test |
+| T-C021 (redaction.py) | Owner B T-B026 (chat endpoint PII redaction) |
 
 ---
 
