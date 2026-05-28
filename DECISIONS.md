@@ -17,6 +17,7 @@ Every entry includes the metric used, the alternatives considered, and the resul
 | Redis sliding window size N (session memory) | 5, 10, 20, unlimited | N=10 — last 10 messages per conversation | 10 messages cover ~5 turns; enough context for typical visitor sessions without bloating Redis payloads or prompt size | D-009 | 2026-05-27 |
 | capture_lead rate-limit numbers | Various | 3 per session, 5 per visitor IP per hour | 3/session blocks repeated re-submission in one chat; 5/hour per IP prevents scripted spam across sessions while allowing legitimate re-engagement | D-010 | 2026-05-27 |
 | RAG retrieval improvement | Reranking (Voyage rerank-2), query rewriting (Claude) | Reranking — see RAG-001 | Reranking outperformed query rewriting on hit@5 for FAQ-style queries | D-011 | 2026-05-27 |
+| Admin auth implementation | fastapi-users (per original plan), native PyJWT + bcrypt `/auth/login` | Native PyJWT + bcrypt `/auth/login` accepting OAuth2 password form | Rest of the stack already uses native PyJWT/bcrypt (`security.py`, `auth_service.create_access_token`, `require_role`, seeds); adopting fastapi-users would have required a User-model migration, re-hashing seeds, and re-wiring every admin route's `Depends`. Same security properties (HS256 JWT, bcrypt-hashed passwords) with one new endpoint and no migration. | D-012 | 2026-05-28 |
 
 ---
 
