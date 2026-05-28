@@ -1,3 +1,4 @@
+import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
@@ -99,6 +100,7 @@ async def create_widget_token(
             "tenant_id": str(widget.tenant_id),
             "widget_id": str(widget.id),
             "origin": payload.origin,
+            "session_id": secrets.token_hex(16),
             "iat": int(now.timestamp()),
             "exp": int((now + timedelta(seconds=expires_in)).timestamp()),
         },

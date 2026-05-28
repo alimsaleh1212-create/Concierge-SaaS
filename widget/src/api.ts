@@ -31,8 +31,12 @@ export async function sendMessage(input: SendMessageInput): Promise<ChatResponse
   });
 
   if (!response.ok) {
-    const detail = await response.text();
-    throw new Error(detail || "Failed to send message");
+    try {
+      const body = await response.json();
+      throw new Error(body.detail || "Failed to send message");
+    } catch {
+      throw new Error("Failed to send message");
+    }
   }
 
   return (await response.json()) as ChatResponse;

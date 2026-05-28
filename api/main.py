@@ -1,6 +1,9 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.openapi.utils import get_openapi
+from fastapi.security import HTTPBearer
 from prometheus_client import make_asgi_app
 
 from app.api.platform import tenants as platform_tenants
@@ -45,6 +48,28 @@ def create_app() -> FastAPI:
     # ── Prometheus metrics ─────────────────────────────────────────────────────
     metrics_app = make_asgi_app()
     app.mount("/metrics", metrics_app)
+
+    # ── Add HTTPBearer to OpenAPI so Swagger shows a raw token field ───────────
+    def custom_openapi():
+        if app.openapi_schema:
+            return app.openapi_schema
+        schema = get_openapi(title=app.title, version=app.version, routes=app.routes)
+        schema.setdefault("components", {}).setdefault("securitySchemes", {})["HTTPBearer"] = {
+            "type": "http",
+            "scheme": "bearer",
+        }
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = custom_openapi
+
+    # ── CORS ───────────────────────────────────────────────────────────────────
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     # ── Rate limiting middleware ────────────────────────────────────────────────
     settings = get_settings()

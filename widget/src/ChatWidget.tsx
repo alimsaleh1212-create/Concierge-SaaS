@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { marked } from "marked";
 import { sendMessage } from "./api";
 
 export type InitPayload = {
@@ -82,8 +83,8 @@ const bubbleStyle = (role: Message["role"]): React.CSSProperties => ({
   borderRadius: "14px",
   background: role === "user" ? "#f25c54" : "#1b1f2b",
   color: role === "user" ? "#0b0d12" : "#f8f7f2",
-  whiteSpace: "pre-wrap",
-  lineHeight: 1.4,
+  lineHeight: 1.5,
+  fontSize: "14px",
 });
 
 const ChatWidget = ({ init }: { init: InitPayload }) => {
@@ -145,7 +146,7 @@ const ChatWidget = ({ init }: { init: InitPayload }) => {
         {
           id: `${Date.now()}-error`,
           role: "assistant",
-          content: "Sorry, something went wrong. Please try again.",
+          content: error instanceof Error ? error.message : "Sorry, something went wrong. Please try again.",
         },
       ]);
     } finally {
@@ -161,9 +162,14 @@ const ChatWidget = ({ init }: { init: InitPayload }) => {
       </div>
       <div style={messageListStyle}>
         {messages.map((message) => (
-          <div key={message.id} style={bubbleStyle(message.role)}>
-            {message.content}
-          </div>
+          <div
+            key={message.id}
+            style={bubbleStyle(message.role)}
+            {...(message.role === "assistant"
+              ? { dangerouslySetInnerHTML: { __html: marked.parse(message.content) as string } }
+              : { children: message.content }
+            )}
+          />
         ))}
         {pending && (
           <div style={bubbleStyle("assistant")}>

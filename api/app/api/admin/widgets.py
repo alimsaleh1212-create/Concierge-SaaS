@@ -80,7 +80,13 @@ async def list_widgets(
     widgets = await repo.all(tid)
     return {
         "widgets": [
-            {"id": str(w.id), "name": w.name, "is_active": w.is_active}
+            {
+                "id": str(w.id),
+                "name": w.name,
+                "is_active": w.is_active,
+                "greeting": w.greeting,
+                "theme_config": w.theme_config or {},
+            }
             for w in widgets
         ]
     }

@@ -24,6 +24,7 @@ COPY --from=builder /app/.venv /app/.venv
 COPY app/ ./app/
 COPY alembic/ ./alembic/
 COPY seeds/ ./seeds/
+COPY prompts/ ./prompts/
 COPY alembic.ini ./
 COPY main.py ./
 

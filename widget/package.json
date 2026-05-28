@@ -13,6 +13,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "marked": "^13.0.0",
     "preact": "^10.23.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
