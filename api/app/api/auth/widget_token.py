@@ -3,13 +3,17 @@ from uuid import UUID
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.security import verify_password
 from app.models.tenant import Tenant
+from app.models.user import User
 from app.models.widget import Widget
+from app.services.auth_service import create_access_token
 
 
 class WidgetTokenRequest(BaseModel):
@@ -22,15 +26,39 @@ class WidgetTokenResponse(BaseModel):
     expires_in: int
 
 
+class LoginResponse(BaseModel):
+    access_token: str
+    token_type: str
+
+
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-try:
-    from app.services.auth_service import auth_backend, fastapi_users
 
-    router.include_router(fastapi_users.get_auth_router(auth_backend), prefix="")
-except Exception:
-    # Auth service is wired by Owner A; keep widget-token endpoint available meanwhile.
-    pass
+@router.post("/login", response_model=LoginResponse)
+async def login(
+    form: OAuth2PasswordRequestForm = Depends(),
+    session: AsyncSession = Depends(get_db),
+) -> LoginResponse:
+    """Email + password → JWT bearer token.
+
+    Native replacement for the fastapi-users `/auth/login` route. Accepts the
+    OAuth2 password-flow form (`username`, `password`) so Swagger's "Authorize"
+    button and the Streamlit admin can both use it. See DECISIONS.md D-012.
+    """
+    result = await session.execute(select(User).where(User.email == form.username))
+    user = result.scalar_one_or_none()
+    if (
+        user is None
+        or not user.is_active
+        or user.is_deleted
+        or not verify_password(form.password, user.hashed_password)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return LoginResponse(access_token=create_access_token(user), token_type="bearer")
 
 
 @router.post("/widget-token", response_model=WidgetTokenResponse)

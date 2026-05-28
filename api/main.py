@@ -9,6 +9,7 @@ from app.api.admin import cms as admin_cms
 from app.api.admin import widgets as admin_widgets
 from app.api.admin import leads as admin_leads
 from app.agent.router import validate_prompts
+from app.api.auth import widget_token as auth_widget_token
 from app.api.chat import messages as chat_messages
 from app.core.config import get_settings
 from app.middleware.rate_limit import TenantRateLimitMiddleware
@@ -32,7 +33,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_widgets.router)
     app.include_router(admin_leads.router)
     app.include_router(chat_messages.router)
-    # Owner D mounts: auth router
+    app.include_router(auth_widget_token.router)
 
     # ── Health ─────────────────────────────────────────────────────────────────
     @app.get("/health", tags=["internal"])
