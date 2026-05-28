@@ -9,6 +9,7 @@ from app.agent.tools.capture_lead import CaptureLeadTool
 from app.agent.tools.escalate import EscalateTool
 from app.core import modelserver_client
 from app.core.llm import chat_completion
+from app.rag.retrieval_guardrails import apply_retrieval_guardrails, default_tenant_rails
 from app.rag.retriever import retrieve
 
 logger = logging.getLogger(__name__)
@@ -76,7 +77,20 @@ async def _rag_workflow(
 ) -> AgentResult:
     """Deterministic: retrieve → prompt → Claude. No agent loop."""
     chunks = await retrieve(message, tenant_ctx.tenant_id, session, top_k=5)
-    context = "\n\n".join(f"[{i+1}] {c.parent_text}" for i, c in enumerate(chunks))
+    safe_chunks = await apply_retrieval_guardrails(
+        query=message,
+        chunks=chunks,
+        tenant_id=tenant_ctx.tenant_id,
+        conversation_id=tenant_ctx.conversation_id,
+        tenant_rails=default_tenant_rails(),
+    )
+    if chunks and not safe_chunks:
+        return AgentResult(
+            response="I'm sorry, I can't use the retrieved context for this request.",
+            tool_used="rag_search",
+        )
+
+    context = "\n\n".join(f"[{i+1}] {c.parent_text}" for i, c in enumerate(safe_chunks))
 
     prompt = (
         _load_rag_answer()

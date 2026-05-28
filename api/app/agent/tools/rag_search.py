@@ -3,7 +3,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import guardrails_client
+from app.rag.retrieval_guardrails import apply_retrieval_guardrails, default_tenant_rails
 from app.rag.retriever import retrieve
 
 SCHEMA: dict[str, Any] = {
@@ -39,20 +39,17 @@ class RagSearchTool:
         if not chunks:
             return "No relevant information found in the knowledge base."
 
-        raw_chunks = [
-            {"chunk_index": c.chunk_index, "text": c.parent_text, "content_id": str(c.content_id)}
-            for c in chunks
-        ]
-        retrieval_result = await guardrails_client.check_retrieval(
+        safe_chunks = await apply_retrieval_guardrails(
+            query=query,
+            chunks=chunks,
             tenant_id=self.tenant_id,
             conversation_id=self.conversation_id or uuid.UUID(int=0),
-            query=query,
-            chunks=raw_chunks,
+            tenant_rails=default_tenant_rails(),
         )
-        if not retrieval_result.allowed:
-            return "No relevant information found in the knowledge base."
+        if not safe_chunks:
+            return "I'm sorry, I can't use the retrieved context for this request."
 
         parts = []
-        for i, chunk in enumerate(retrieval_result.filtered_chunks, 1):
-            parts.append(f"[{i}] {chunk.get('text', '')}")
+        for i, chunk in enumerate(safe_chunks, 1):
+            parts.append(f"[{i}] {chunk.parent_text}")
         return "\n\n".join(parts)
