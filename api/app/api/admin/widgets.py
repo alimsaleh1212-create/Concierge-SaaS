@@ -85,6 +85,7 @@ async def list_widgets(
                 "name": w.name,
                 "is_active": w.is_active,
                 "greeting": w.greeting,
+                "allowed_origins": w.allowed_origins or [],
                 "theme_config": w.theme_config or {},
             }
             for w in widgets

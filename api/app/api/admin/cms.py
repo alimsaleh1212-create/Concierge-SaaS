@@ -47,7 +47,9 @@ async def list_cms(
             {
                 "id": str(c.id),
                 "title": c.title,
+                "body": c.body,
                 "content_type": c.content_type,
+                "metadata": c.metadata_ or {},
                 "created_at": c.created_at.isoformat(),
             }
             for c in items
