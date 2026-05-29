@@ -26,9 +26,9 @@ description: "Task list — Owner D: Widget, Admin UI & CI/CD"
 all stub files Owner D owns from day one.
 
 - [ ] T-D001 Choose tracing backend (OpenTelemetry → Jaeger vs OpenTelemetry → Tempo); record in DECISIONS.md D-007 with one-line rationale; update docker-compose.yml to add the chosen tracing service; announce in team chat (resolves T-S010)
-- [ ] T-D002 [P] Initialise `widget/` as a Vite + React + TypeScript project: `npm create vite@latest widget -- --template react-ts`; install no external UI libraries (bundle must be < 50 KB gzipped); add `widget/package.json`, `widget/vite.config.ts` with correct output path
-- [ ] T-D003 [P] Create `admin/requirements.txt` with: `streamlit>=1.35`, `requests`, `pyjwt`, `python-dotenv`
-- [ ] T-D004 [P] Create `admin/app.py`: Streamlit entry point; reads API base URL from env; handles login state via session; shows navigation to 5 pages; requires `tenant_admin` or `tenant_manager` role from JWT
+- [X] T-D002 [P] Initialise `widget/` as a Vite + React + TypeScript project: `npm create vite@latest widget -- --template react-ts`; install no external UI libraries (bundle must be < 50 KB gzipped); add `widget/package.json`, `widget/vite.config.ts` with correct output path
+- [X] T-D003 [P] Create `admin/requirements.txt` with: `streamlit>=1.35`, `requests`, `pyjwt`, `python-dotenv`
+- [X] T-D004 [P] Create `admin/app.py`: Streamlit entry point; reads API base URL from env; handles login state via session; shows navigation to 5 pages; requires `tenant_admin` or `tenant_manager` role from JWT
 
 **Checkpoint**: `npm run build` in `widget/` produces a dist/ folder. `streamlit run admin/app.py` starts without import errors. Tracing decision recorded in DECISIONS.md.
 
@@ -42,10 +42,10 @@ Owner B's chat endpoint depends on a valid widget JWT; this phase produces that 
 **⚠️ IMPORTANT**: Owner B T-B026 (chat endpoint) depends on the widget JWT working.
 Announce when `POST /auth/widget-token` is live.
 
-- [ ] T-D005 Create `api/app/api/auth/widget_token.py`: `POST /auth/widget-token` — accepts `{widget_id: uuid, origin: str}`; validates widget exists + `is_active=true` (→ 404); checks origin in `widgets.allowed_origins` OR `tenants.allowed_origins` using server-side check independent of CORS header (→ 403 on mismatch); signs JWT with `widgets.widget_token_secret` (1 hr expiry, claims: `tenant_id`, `widget_id`, `origin`); returns `{token, expires_in: 3600}`; also wires `POST /auth/login` via fastapi-users standard endpoint
-- [ ] T-D006 Create `widget/loader/widget.js` (vanilla JS, < 5 KB): reads `data-widget-id` from own `<script>` tag; reads `window.location.origin`; calls `POST /auth/widget-token`; on 403 logs to console and stops; on success creates `<iframe>` pointing at MinIO-hosted bundle URL with fixed position/z-index styles; after iframe `load` event sends `postMessage({type:"CONCIERGE_INIT", token, widget_id})` to the iframe
-- [ ] T-D007 [P] Create `widget/src/api.ts`: `sendMessage(token, conversation_id, content, session_id) -> ChatResponse` — `POST /chat/messages` with `Authorization: Bearer <token>`; token stored in React state (never localStorage); typed with the response shape from `contracts/api.md`
-- [ ] T-D008 Create `widget/src/main.tsx`: listen for `postMessage` with `type=CONCIERGE_INIT`; validate origin before accepting; store token in React state; render `<ChatWidget />`
+- [X] T-D005 Create `api/app/api/auth/widget_token.py`: `POST /auth/widget-token` — accepts `{widget_id: uuid, origin: str}`; validates widget exists + `is_active=true` (→ 404); checks origin in `widgets.allowed_origins` OR `tenants.allowed_origins` using server-side check independent of CORS header (→ 403 on mismatch); signs JWT with `widgets.widget_token_secret` (1 hr expiry, claims: `tenant_id`, `widget_id`, `origin`); returns `{token, expires_in: 3600}`; also wires `POST /auth/login` via fastapi-users standard endpoint
+- [X] T-D006 Create `widget/loader/widget.js` (vanilla JS, < 5 KB): reads `data-widget-id` from own `<script>` tag; reads `window.location.origin`; calls `POST /auth/widget-token`; on 403 logs to console and stops; on success creates `<iframe>` pointing at MinIO-hosted bundle URL with fixed position/z-index styles; after iframe `load` event sends `postMessage({type:"CONCIERGE_INIT", token, widget_id})` to the iframe
+- [X] T-D007 [P] Create `widget/src/api.ts`: `sendMessage(token, conversation_id, content, session_id) -> ChatResponse` — `POST /chat/messages` with `Authorization: Bearer <token>`; token stored in React state (never localStorage); typed with the response shape from `contracts/api.md`
+- [X] T-D008 Create `widget/src/main.tsx`: listen for `postMessage` with `type=CONCIERGE_INIT`; validate origin before accepting; store token in React state; render `<ChatWidget />`
 
 **Checkpoint**: `POST /auth/widget-token` with a valid widget_id + allowed origin returns a signed JWT. With an invalid origin returns HTTP 403. With a missing token returns HTTP 401. Announce in team chat.
 
@@ -60,10 +60,10 @@ bundle fits in < 50 KB gzipped.
 allowed origin); type "What are your hours?" — a response appears; bundle gzipped size
 < 50 KB (`du -sh dist/*.js` after `vite build`).
 
-- [ ] T-D009 [P] [US1] Create `widget/src/ChatWidget.tsx`: React functional component; manages message list state; displays conversation in a scrollable container; controlled input field with submit button; calls `sendMessage` from `api.ts` on submit; shows typing indicator while awaiting response
-- [ ] T-D010 [P] [US1] Style `ChatWidget.tsx` inline (no CSS framework — bundle budget): minimal chat bubble layout; `position: fixed; bottom: 24px; right: 24px`; z-index 9999; max 360px width; respects tenant `greeting` from widget config (passed via `CONCIERGE_INIT` postMessage if available)
-- [ ] T-D011 [US1] Add `vite.config.ts` build config: output to `dist/`, terser minification, no vendor chunk splitting; add `vite-plugin-compression` for gzip; CI fails if `dist/index.js.gz` > 51200 bytes (50 KB)
-- [ ] T-D012 [US1] Create MinIO upload script `widget/scripts/upload-bundle.sh`: uploads `dist/index.js` to MinIO bucket `concierge-widget` with `Cache-Control: public,max-age=31536000`; run as part of `docker compose up` widget service init
+- [X] T-D009 [P] [US1] Create `widget/src/ChatWidget.tsx`: React functional component; manages message list state; displays conversation in a scrollable container; controlled input field with submit button; calls `sendMessage` from `api.ts` on submit; shows typing indicator while awaiting response
+- [X] T-D010 [P] [US1] Style `ChatWidget.tsx` inline (no CSS framework — bundle budget): minimal chat bubble layout; `position: fixed; bottom: 24px; right: 24px`; z-index 9999; max 360px width; respects tenant `greeting` from widget config (passed via `CONCIERGE_INIT` postMessage if available)
+- [X] T-D011 [US1] Add `vite.config.ts` build config: output to `dist/`, terser minification, no vendor chunk splitting; add `vite-plugin-compression` for gzip; CI fails if `dist/index.js.gz` > 51200 bytes (50 KB)
+- [X] T-D012 [US1] Create MinIO upload script `widget/scripts/upload-bundle.sh`: uploads `dist/index.js` to MinIO bucket `concierge-widget` with `Cache-Control: public,max-age=31536000`; run as part of `docker compose up` widget service init
 
 **Checkpoint**: Full embed test from `quickstart.md` widget section — token exchange succeeds, widget renders, chat message sent and response received. `dist/index.js.gz` < 50 KB.
 
@@ -77,12 +77,12 @@ leads, and copy the embed snippet.
 **Independent Test**: Log in as Mario's Pizza tenant_admin; create a CMS page; see it
 in the CMS list; open Widgets page and update the greeting; copy the embed snippet.
 
-- [ ] T-D013 [P] [US3] Create `admin/pages/1_CMS.py`: Streamlit page listing CMS items (`GET /admin/cms`); form to create new item (`POST /admin/cms`); edit button opens inline form (`PATCH /admin/cms/{id}`); delete button with confirmation (`DELETE /admin/cms/{id}`); requires tenant_admin JWT from session
-- [ ] T-D014 [P] [US3] Create `admin/pages/2_Widgets.py`: Streamlit page listing widgets (`GET /admin/widgets`); form to create widget (`POST /admin/widgets`); edit form for greeting, allowed_origins, theme_config JSONB (`PATCH /admin/widgets/{id}`)
-- [ ] T-D015 [P] [US3] Create `admin/pages/3_Guardrails.py`: Streamlit page to configure per-tenant guardrail topics (`PATCH /admin/widgets/{id}` targeting `theme_config.tenant_rails`); shows allowed_topics list, blocked_topics list, refusal_tone selector; changes stored in `widgets.theme_config`
-- [ ] T-D016 [P] [US3] Create `admin/pages/4_Leads.py`: Streamlit page listing leads (`GET /admin/leads?status=...`); status filter; update status button (`PATCH /admin/leads/{id}`)
-- [ ] T-D017 [P] [US3] Create `admin/pages/5_Snippet.py`: Streamlit page showing the embed HTML snippet for the selected widget (`GET /admin/widgets/{id}/snippet`); one-click copy to clipboard; preview iframe
-- [ ] T-D018 Create `admin/Dockerfile`: base `python:3.12-slim`; copy `pages/`, `app.py`, `requirements.txt`; expose port 8501; CMD `streamlit run app.py --server.port 8501 --server.address 0.0.0.0`
+- [X] T-D013 [P] [US3] Create `admin/pages/1_CMS.py`: Streamlit page listing CMS items (`GET /admin/cms`); form to create new item (`POST /admin/cms`); edit button opens inline form (`PATCH /admin/cms/{id}`); delete button with confirmation (`DELETE /admin/cms/{id}`); requires tenant_admin JWT from session
+- [X] T-D014 [P] [US3] Create `admin/pages/2_Widgets.py`: Streamlit page listing widgets (`GET /admin/widgets`); form to create widget (`POST /admin/widgets`); edit form for greeting, allowed_origins, theme_config JSONB (`PATCH /admin/widgets/{id}`)
+- [X] T-D015 [P] [US3] Create `admin/pages/3_Guardrails.py`: Streamlit page to configure per-tenant guardrail topics (`PATCH /admin/widgets/{id}` targeting `theme_config.tenant_rails`); shows allowed_topics list, blocked_topics list, refusal_tone selector; changes stored in `widgets.theme_config`
+- [X] T-D016 [P] [US3] Create `admin/pages/4_Leads.py`: Streamlit page listing leads (`GET /admin/leads?status=...`); status filter; update status button (`PATCH /admin/leads/{id}`)
+- [X] T-D017 [P] [US3] Create `admin/pages/5_Snippet.py`: Streamlit page showing the embed HTML snippet for the selected widget (`GET /admin/widgets/{id}/snippet`); one-click copy to clipboard; preview iframe
+- [X] T-D018 Create `admin/Dockerfile`: base `python:3.12-slim`; copy `pages/`, `app.py`, `requirements.txt`; expose port 8501; CMD `streamlit run app.py --server.port 8501 --server.address 0.0.0.0`
 
 **Checkpoint**: Full admin workflow works via Streamlit UI. CMS create → chat returns
 updated content. Leads list shows captured leads. Embed snippet copies correctly.
@@ -96,8 +96,8 @@ updated content. Leads list shows captured leads. Embed snippet copies correctly
 **Independent Test**: Introduce a deliberate threshold regression in `eval_thresholds.yaml`
 (lower `classifier.macro_f1` to 0.50) — CI fails. Revert — CI passes.
 
-- [ ] T-D019 [US5] Implement `.github/workflows/ci.yml` (replacing the stub): stages — (1) lint + typecheck: `ruff check api/` + `mypy api/` + `npm run typecheck` in widget/; (2) build images: `docker compose build` — fail if any image > 500 MB; (3) eval gates (parallel): `pytest api/tests/evals/test_classifier.py`, `pytest api/tests/evals/test_rag.py`, `pytest api/tests/evals/test_agent.py`, `pytest api/tests/red_team/test_probes.py`, `pytest api/tests/evals/test_redaction.py`, smoke test; all gates read thresholds from `eval_thresholds.yaml`
-- [ ] T-D020 [P] [US5] Create `.github/workflows/smoke.yml`: standalone smoke-test job — `docker compose up -d --build`, wait for healthchecks, run widget token exchange + one full chat round-trip via curl, `docker compose down`; used as the `smoke_test` gate
+- [X] T-D019 [US5] Implement `.github/workflows/ci.yml` (replacing the stub): stages — (1) lint + typecheck: `ruff check api/` + `mypy api/` + `npm run typecheck` in widget/; (2) build images: `docker compose build` — fail if any image > 500 MB; (3) eval gates (parallel): `pytest api/tests/evals/test_classifier.py`, `pytest api/tests/evals/test_rag.py`, `pytest api/tests/evals/test_agent.py`, `pytest api/tests/red_team/test_probes.py`, `pytest api/tests/evals/test_redaction.py`, smoke test; all gates read thresholds from `eval_thresholds.yaml`
+- [X] T-D020 [P] [US5] Create `.github/workflows/smoke.yml`: standalone smoke-test job — `docker compose up -d --build`, wait for healthchecks, run widget token exchange + one full chat round-trip via curl, `docker compose down`; used as the `smoke_test` gate
 - [ ] T-D021 [P] [US5] Add CI image-size check to `.github/workflows/ci.yml`: after `docker compose build`, for each service image run `docker image inspect <name> --format '{{.Size}}'` and fail if > 524288000 bytes (500 MB)
 - [ ] T-D022 [US5] Add widget bundle size check to CI: after `npm run build`, check `du -b dist/index.js.gz` and fail if > 51200 bytes; add as a step in the lint stage before build
 

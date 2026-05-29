@@ -144,10 +144,10 @@ work end-to-end from first `docker compose up`.
 → both entities replaced, `is_redacted=True`. Plain text → `is_redacted=False`.
 
 - [x] T-C021-deps [P] [US1] Add `presidio-analyzer>=2.2`, `presidio-anonymizer>=2.2`, `spacy>=3.7` to `api/pyproject.toml`; download `en_core_web_md` in `api/Dockerfile` builder stage — completed.
-- [ ] T-C021 [P] [US1] Create `api/app/redaction.py`: Presidio `AnalyzerEngine` + `AnonymizerEngine` wrapper; `redact(text: str) -> RedactionResult` replacing entity types `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CRYPTO`, `API_KEY`, `US_SSN`, `IP_ADDRESS`, `PASSWORD`; `is_redacted: bool` flag on result.
-- [ ] T-C021a [P] [US1] Add custom Presidio recognizers in `api/app/redaction.py` for `API_KEY` (pattern: `sk-[a-zA-Z0-9]{16,}`) and `PASSWORD` (pattern: `(?i)password\s*[=:]\s*\S+`) — default Presidio does not catch these reliably.
-- [ ] T-C021b [P] [US1] Create `api/tests/unit/test_redaction.py`: assert emails, phone numbers, credit cards, IP addresses, API keys (`sk-test-1234567890abcdef`), and password strings (`password=secret123`) are replaced; assert `is_redacted=True` only when content changed.
-- [ ] T-C021c [US1] Integration note for Owner B: `redact()` must be called before writing user/model text to the `messages` table, Redis session, logs, or traces; Owner A provides the helper; Owner B wires it in `api/app/api/chat/messages.py`.
+- [X] T-C021 [P] [US1] Create `api/app/redaction.py`: Presidio `AnalyzerEngine` + `AnonymizerEngine` wrapper; `redact(text: str) -> RedactionResult` replacing entity types `EMAIL_ADDRESS`, `PHONE_NUMBER`, `CREDIT_CARD`, `CRYPTO`, `API_KEY`, `US_SSN`, `IP_ADDRESS`, `PASSWORD`; `is_redacted: bool` flag on result.
+- [X] T-C021a [P] [US1] Add custom Presidio recognizers in `api/app/redaction.py` for `API_KEY` (pattern: `sk-[a-zA-Z0-9]{16,}`) and `PASSWORD` (pattern: `(?i)password\s*[=:]\s*\S+`) — default Presidio does not catch these reliably.
+- [X] T-C021b [P] [US1] Create `api/tests/unit/test_redaction.py`: assert emails, phone numbers, credit cards, IP addresses, API keys (`sk-test-1234567890abcdef`), and password strings (`password=secret123`) are replaced; assert `is_redacted=True` only when content changed.
+- [X] T-C021c [US1] Integration note for Owner B: `redact()` must be called before writing user/model text to the `messages` table, Redis session, logs, or traces; Owner A provides the helper; Owner B wires it in `api/app/api/chat/messages.py`.
 
 **Checkpoint**: `pytest api/tests/unit/test_redaction.py -v` — all entity-type and `is_redacted` assertions pass.
 
