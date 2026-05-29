@@ -35,6 +35,7 @@ get_settings.cache_clear()  # ensure fresh read of .env, not a stale cached inst
 from app.core.database import AsyncSessionLocal, Base
 from app.models import *  # noqa: F401,F403 — registers all ORM models with Base
 from app.models.tenant import Tenant
+from app.models.user import User
 from app.models.widget import Widget
 
 
@@ -48,6 +49,28 @@ async def create_tables() -> None:
     print("[setup] Tables created (idempotent)")
 
 
+_PLATFORM_MANAGER_EMAIL = "platform@concierge.local"
+_PLATFORM_MANAGER_PASSWORD = "platform-demo-change-me"
+
+
+async def seed_platform_manager() -> None:
+    from app.core.security import get_password_hash
+    async with AsyncSessionLocal() as session:
+        result = await session.execute(select(User).where(User.email == _PLATFORM_MANAGER_EMAIL))
+        if result.scalar_one_or_none() is None:
+            session.add(User(
+                tenant_id=None,
+                email=_PLATFORM_MANAGER_EMAIL,
+                hashed_password=get_password_hash(_PLATFORM_MANAGER_PASSWORD),
+                role="tenant_manager",
+                is_active=True,
+            ))
+            await session.commit()
+            print(f"[setup] Created platform manager: {_PLATFORM_MANAGER_EMAIL}")
+        else:
+            print(f"[setup] Platform manager already exists: {_PLATFORM_MANAGER_EMAIL}")
+
+
 async def run_seeds() -> None:
     from seeds.marios_pizza import seed as seed_novatech
     from seeds.lawson_partners import seed as seed_learnsphere
@@ -57,6 +80,8 @@ async def run_seeds() -> None:
 
     async with AsyncSessionLocal() as session:
         await seed_learnsphere(session)
+
+    await seed_platform_manager()
 
 
 def mint_jwt(tenant_id: str, widget_id: str, jwt_secret: str) -> str:
