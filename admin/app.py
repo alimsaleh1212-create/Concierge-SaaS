@@ -33,11 +33,16 @@ def _logout() -> None:
 st.sidebar.title("Concierge Admin")
 
 if st.session_state.get("access_token"):
-    st.sidebar.page_link("pages/1_CMS.py", label="CMS")
-    st.sidebar.page_link("pages/2_Widgets.py", label="Widgets")
-    st.sidebar.page_link("pages/3_Guardrails.py", label="Guardrails")
-    st.sidebar.page_link("pages/4_Leads.py", label="Leads")
-    st.sidebar.page_link("pages/5_Snippet.py", label="Snippet")
+    _role = st.session_state.get("role")
+    if _role == "tenant_admin":
+        st.sidebar.page_link("pages/1_CMS.py", label="CMS")
+        st.sidebar.page_link("pages/2_Widgets.py", label="Widgets")
+        st.sidebar.page_link("pages/3_Guardrails.py", label="Guardrails")
+        st.sidebar.page_link("pages/4_Leads.py", label="Leads")
+        st.sidebar.page_link("pages/5_Snippet.py", label="Snippet")
+    elif _role == "tenant_manager":
+        st.sidebar.page_link("pages/6_Tenants.py", label="Tenants")
+        st.sidebar.page_link("pages/7_Audit_Log.py", label="Audit Log")
 
     if st.sidebar.button("Log out"):
         _logout()
