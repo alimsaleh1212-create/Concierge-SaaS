@@ -21,8 +21,7 @@ def _login(username: str, password: str) -> str:
         timeout=10,
     )
     response.raise_for_status()
-    payload = response.json()
-    return payload["access_token"]
+    return response.json()["access_token"]
 
 
 def _logout() -> None:
@@ -30,22 +29,8 @@ def _logout() -> None:
         st.session_state.pop(key, None)
 
 
-st.sidebar.title("Concierge Admin")
-
-if st.session_state.get("access_token"):
-    st.sidebar.page_link("pages/1_CMS.py", label="CMS")
-    st.sidebar.page_link("pages/2_Widgets.py", label="Widgets")
-    st.sidebar.page_link("pages/3_Guardrails.py", label="Guardrails")
-    st.sidebar.page_link("pages/4_Leads.py", label="Leads")
-    st.sidebar.page_link("pages/5_Snippet.py", label="Snippet")
-
-    if st.sidebar.button("Log out"):
-        _logout()
-        st.rerun()
-
-st.title("Concierge Admin")
-
-if not st.session_state.get("access_token"):
+def _login_page() -> None:
+    st.title("Concierge Admin")
     with st.form("login"):
         st.subheader("Sign in")
         username = st.text_input("Email")
@@ -64,8 +49,43 @@ if not st.session_state.get("access_token"):
             st.rerun()
         except requests.HTTPError:
             st.error("Login failed")
+
+
+if not st.session_state.get("access_token"):
+    pg = st.navigation([st.Page(_login_page, title="Login", icon="🔐")])
 else:
     role = st.session_state.get("role")
-    st.success(f"Signed in as {st.session_state.get('email')} ({role})")
-    if role not in {"tenant_admin", "tenant_manager"}:
-        st.warning("This UI requires tenant_admin or tenant_manager role.")
+    email = st.session_state.get("email", "")
+
+    st.sidebar.title("Concierge Admin")
+    st.sidebar.caption(f"{email}")
+    st.sidebar.caption(f"Role: **{role}**")
+    if st.sidebar.button("Log out"):
+        _logout()
+        st.rerun()
+    st.sidebar.divider()
+
+    if role == "tenant_admin":
+        pg = st.navigation({
+            "Content": [
+                st.Page("pages/1_CMS.py", title="CMS", icon="📄"),
+                st.Page("pages/2_Widgets.py", title="Widgets", icon="🧩"),
+                st.Page("pages/3_Guardrails.py", title="Guardrails", icon="🛡️"),
+            ],
+            "Operations": [
+                st.Page("pages/4_Leads.py", title="Leads", icon="📋"),
+                st.Page("pages/5_Snippet.py", title="Embed Snippet", icon="🔗"),
+            ],
+        })
+    elif role == "tenant_manager":
+        pg = st.navigation({
+            "Platform": [
+                st.Page("pages/6_Tenants.py", title="Tenants", icon="🏢"),
+                st.Page("pages/7_Audit_Log.py", title="Audit Log", icon="📜"),
+            ],
+        })
+    else:
+        st.error(f"Role '{role}' is not permitted to use this UI.")
+        st.stop()
+
+pg.run()
