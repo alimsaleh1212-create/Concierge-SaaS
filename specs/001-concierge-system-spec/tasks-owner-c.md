@@ -28,9 +28,9 @@ all stub files Owner C owns from day one.
 - [ ] T-C001 Choose classifier dataset — must be a public labeled text-classification set (sales/support/spam intent or close equivalent); record exact dataset name and file SHA-256 in `model_card.md`; announce in team chat (resolves T-S009)
 - [ ] T-C002 [P] Create `notebooks/train_classical.ipynb`: offline notebook for TF-IDF + logistic regression training; exports `model.joblib`; records macro-F1 on held-out test set
 - [ ] T-C003 [P] Create `notebooks/train_dl.ipynb`: offline notebook for small DL model training (Colab-compatible, with torch); exports ONNX artifact; NO torch imports in any container image
-- [ ] T-C004 [P] Create `evals/classifier/test_set.csv` with columns `text,label` using a representative sample from the chosen dataset (at least 50 rows covering sales/support/spam)
-- [ ] T-C006 [P] Create `guardrails/pyproject.toml` with uv-managed dependencies: `fastapi`, `uvicorn[standard]`, `nemo-guardrails`, `pyjwt`, `httpx`, and `pydantic`; NO torch, NO transformers, and no API redaction-only dependencies.
-- [ ] T-C006a [P] Commit `guardrails/uv.lock` for reproducible guardrails sidecar builds.
+- [X] T-C004 [P] Create `evals/classifier/test_set.csv` with columns `text,label` using a representative sample from the chosen dataset (at least 50 rows covering sales/support/spam)
+- [X] T-C006 [P] Create `guardrails/pyproject.toml` with uv-managed dependencies: `fastapi`, `uvicorn[standard]`, `nemo-guardrails`, `pyjwt`, `httpx`, and `pydantic`; NO torch, NO transformers, and no API redaction-only dependencies.
+- [X] T-C006a [P] Commit `guardrails/uv.lock` for reproducible guardrails sidecar builds.
 
 **Checkpoint**: Dataset chosen and announced. Notebook stubs committed. Dependency files confirm no torch dependency.
 ---
@@ -41,17 +41,17 @@ all stub files Owner C owns from day one.
 
 **⚠️ IMPORTANT**: Owner B depends on `POST /classify` being reachable. Announce when
 the modelserver container passes its healthcheck.
-- [ ] T-C005 [P] Create `modelserver/pyproject.toml` with uv-managed dependencies ONLY: `fastapi`, `uvicorn`, `scikit-learn`, `joblib`, `numpy`, `pyjwt`, `httpx` — NO torch, NO transformers, NO onnxruntime needed for the shipped Logistic Regression model
-- [ ] T-C005a [P] Commit `modelserver/uv.lock` for reproducible modelserver builds
-- [ ] T-C007 Train the TF-IDF + logistic regression model using `notebooks/train_classical.ipynb`; export as `model.joblib` to `modelserver/artifacts/`; record macro-F1 in `modelserver/artifacts/model_card.md` and `modelserver/model_card.md`
-- [ ] T-C008 Train/evaluate the small DL model using `notebooks/train_dl.ipynb` in Colab only; record DL macro-F1 in `modelserver/model_card.md`; do NOT serve this model in the modelserver because Logistic Regression is the chosen production artifact
-- [ ] T-C009 Run LLM zero-shot baseline using Groq API on `evals/classifier/test_set.csv`; record macro-F1 in `modelserver/model_card.md` — no artifact exported
-- [ ] T-C010 Record the production deployment choice in `modelserver/model_card.md` Deployment Choice section: ship the TF-IDF + logistic regression `model.joblib` artifact because it gives strong macro-F1 with lower latency, smaller container size, simpler serving, and no torch/transformers/onnxruntime dependency
-- [ ] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/model.joblib`; record in `modelserver/artifacts/model_card.md` Artifact SHA-256 section
-- [ ] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `modelserver/artifacts/model_card.md`; compute actual SHA-256 of `modelserver/artifacts/model.joblib`; call `sys.exit(1)` with a clear message if they do not match; this verification MUST run during modelserver startup.
-- [ ] T-C013 Create `modelserver/app/classifier.py`: load the chosen sklearn joblib artifact `model.joblib`; expose `predict(text: str) -> tuple[str, float]` returning (label, confidence); no torch, transformers, or onnxruntime import anywhere
-- [ ] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` that validates `Authorization: Bearer <MODELSERVER_SERVICE_TOKEN>` from config/Vault/env, calls `classifier.predict`, and returns `{"label":str,"confidence":float}`; add `GET /health` returning model type `logistic_regression` and artifact SHA-256; call startup SHA-256 verification on app lifespan start.
-- [ ] T-C015 Create `modelserver/Dockerfile`: multi-stage uv-based build; base `python:3.12-slim`; copy only `app/`, `pyproject.toml`, `uv.lock`, `artifacts/`; verify no torch, transformers, or onnxruntime in final layer; target < 500 MB total image
+- [X] T-C005 [P] Create `modelserver/pyproject.toml` with uv-managed dependencies ONLY: `fastapi`, `uvicorn`, `scikit-learn`, `joblib`, `numpy`, `pyjwt`, `httpx` — NO torch, NO transformers, NO onnxruntime needed for the shipped Logistic Regression model
+- [X] T-C005a [P] Commit `modelserver/uv.lock` for reproducible modelserver builds
+- [X] T-C007 Train the TF-IDF + logistic regression model using `notebooks/train_classical.ipynb`; export as `model.joblib` to `modelserver/artifacts/`; record macro-F1 in `modelserver/artifacts/model_card.md` and `modelserver/model_card.md`
+- [X] T-C008 Train/evaluate the small DL model using `notebooks/train_dl.ipynb` in Colab only; record DL macro-F1 in `modelserver/model_card.md`; do NOT serve this model in the modelserver because Logistic Regression is the chosen production artifact
+- [X] T-C009 Run LLM zero-shot baseline using Groq API on `evals/classifier/test_set.csv`; record macro-F1 in `modelserver/model_card.md` — no artifact exported
+- [X] T-C010 Record the production deployment choice in `modelserver/model_card.md` Deployment Choice section: ship the TF-IDF + logistic regression `model.joblib` artifact because it gives strong macro-F1 with lower latency, smaller container size, simpler serving, and no torch/transformers/onnxruntime dependency
+- [X] T-C011 Compute SHA-256 of chosen artifact: `sha256sum modelserver/artifacts/model.joblib`; record in `modelserver/artifacts/model_card.md` Artifact SHA-256 section
+- [X] T-C012 Create `modelserver/app/startup.py`: read expected SHA-256 from `modelserver/artifacts/model_card.md`; compute actual SHA-256 of `modelserver/artifacts/model.joblib`; call `sys.exit(1)` with a clear message if they do not match; this verification MUST run during modelserver startup.
+- [X] T-C013 Create `modelserver/app/classifier.py`: load the chosen sklearn joblib artifact `model.joblib`; expose `predict(text: str) -> tuple[str, float]` returning (label, confidence); no torch, transformers, or onnxruntime import anywhere
+- [X] T-C014 Create `modelserver/app/main.py`: FastAPI app with `POST /classify` that validates `Authorization: Bearer <MODELSERVER_SERVICE_TOKEN>` from config/Vault/env, calls `classifier.predict`, and returns `{"label":str,"confidence":float}`; add `GET /health` returning model type `logistic_regression` and artifact SHA-256; call startup SHA-256 verification on app lifespan start.
+- [X] T-C015 Create `modelserver/Dockerfile`: multi-stage uv-based build; base `python:3.12-slim`; copy only `app/`, `pyproject.toml`, `uv.lock`, `artifacts/`; verify no torch, transformers, or onnxruntime in final layer; target < 500 MB total image
 
 **Checkpoint**: `docker compose up modelserver` → `GET /health` returns `{"status":"ok","model":"logistic_regression"}`. `POST /classify` with service token returns `{label,confidence}`. Announce in team chat.
 
@@ -64,18 +64,18 @@ cross-tenant attempts, and jailbreak — while passing normal messages.
 
 **Independent Test**: `POST /rails/input` with "Ignore previous instructions" → `{"allowed":false,"reason":"prompt_injection_detected"}`. `POST /rails/input` with "What are your hours?" → `{"allowed":true}`.
 
-- [ ] T-C016 [P] [US1] Create `guardrails/config/config.yml`: NeMo Guardrails base config specifying the platform colang file; configure the backend for Anthropic Claude or a Claude-compatible provider only; do not configure OpenAI/GPT models.
-- [ ] T-C017 [US1] Create `guardrails/app/rails/platform_rails.co`: NeMo colang definitions for the four immutable platform rails — prompt injection detection, jailbreak detection, cross-tenant data extraction refusal, system prompt extraction refusal; these MUST NOT be overridable by any tenant config
-- [ ] T-C018 [P] [US1] Create `guardrails/app/rails/tenant_rails.py`: `build_tenant_rails(allowed_topics, blocked_topics, refusal_tone) -> str` — returns a colang snippet injected at request time from the `tenant_rails` field in the sidecar request body
-- [ ] T-C019 [US1] Create `guardrails/app/main.py`: FastAPI app with `POST /rails/input` and `POST /rails/output` (exact contract from `contracts/guardrails.md`); validate `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` from config/Vault/env; run platform rails first (always), then tenant rails; return `{"allowed":bool,"modified_content":null|str,"reason":null|str,"refusal_message":null|str}`; add `GET /health`.
-- [ ] T-C019a [P] [US1] Create `guardrails/app/schemas.py`: Pydantic request/response models for `POST /rails/input`, `POST /rails/output`, and shared `TenantRails` / `GuardrailsResult` shapes; enforce contract fields from `contracts/guardrails.md` including `tenant_id`, `conversation_id`, `content`, `tenant_rails`, `allowed`, `modified_content`, `reason`, and `refusal_message`.
+- [X] T-C016 [P] [US1] Create `guardrails/config/config.yml`: NeMo Guardrails base config specifying the platform colang file; configure the backend for Anthropic Claude or a Claude-compatible provider only; do not configure OpenAI/GPT models.
+- [X] T-C017 [US1] Create `guardrails/app/rails/platform_rails.co`: NeMo colang definitions for the four immutable platform rails — prompt injection detection, jailbreak detection, cross-tenant data extraction refusal, system prompt extraction refusal; these MUST NOT be overridable by any tenant config
+- [X] T-C018 [P] [US1] Create `guardrails/app/rails/tenant_rails.py`: `build_tenant_rails(allowed_topics, blocked_topics, refusal_tone) -> str` — returns a colang snippet injected at request time from the `tenant_rails` field in the sidecar request body
+- [X] T-C019 [US1] Create `guardrails/app/main.py`: FastAPI app with `POST /rails/input` and `POST /rails/output` (exact contract from `contracts/guardrails.md`); validate `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` from config/Vault/env; run platform rails first (always), then tenant rails; return `{"allowed":bool,"modified_content":null|str,"reason":null|str,"refusal_message":null|str}`; add `GET /health`.
+- [X] T-C019a [P] [US1] Create `guardrails/app/schemas.py`: Pydantic request/response models for `POST /rails/input`, `POST /rails/output`, and shared `TenantRails` / `GuardrailsResult` shapes; enforce contract fields from `contracts/guardrails.md` including `tenant_id`, `conversation_id`, `content`, `tenant_rails`, `allowed`, `modified_content`, `reason`, and `refusal_message`.
 
-- [ ] T-C019b [P] [US1] Create sidecar unit tests for `guardrails/app/main.py`: test `/health`, valid `/rails/input`, blocked prompt-injection input, blocked cross-tenant input, valid `/rails/output`, blocked unsafe output, bad payload `422`, invalid service token `401`, missing Authorization header `401`, and malformed Authorization header `401`.
-- [ ] T-C019c [US1] Wire `guardrails/app/main.py` to load `guardrails/config/config.yml` and execute NeMo Guardrails flows from `platform_rails.co`; keep deterministic checks as a fallback if NeMo loading fails in local demo mode.
-- [ ] T-C019d [US1] Wire NeMo runtime to the real Anthropic provider: remove the placeholder Claude-compatible `base_url` from `guardrails/config/config.yml`, consume `ANTHROPIC_API_KEY` from the guardrails container environment supplied by Vault/Docker Compose, add any required Anthropic provider dependency for NeMo, and verify `LLMRails` loads without using the fake `http://claude-compatible:8000/v1` endpoint. Do not hardcode secrets.
-- [ ] T-C019e [US1] Load `GUARDRAILS_SERVICE_TOKEN` from Vault in the guardrails sidecar: add guardrails-side config loading using `VAULT_ADDR`, `VAULT_ROOT_TOKEN`, and `secret/concierge`; keep environment fallback for local dev; update `/rails/input` and `/rails/output` auth to use the loaded token.
-- [ ] T-C019f [US1] Add new prompt-injection, cross-tenant, and system-prompt extraction variants to platform rails and fallback checks; add tests proving they return the correct platform reason instead of `off_topic`.
-- [ ] T-C020 Create `guardrails/Dockerfile`: uv-based build using `python:3.12-slim`; copy `app/`, `config/`, `pyproject.toml`, and `uv.lock`; install with `uv sync --frozen`; verify no torch or transformers; target < 500 MB.
+- [X] T-C019b [P] [US1] Create sidecar unit tests for `guardrails/app/main.py`: test `/health`, valid `/rails/input`, blocked prompt-injection input, blocked cross-tenant input, valid `/rails/output`, blocked unsafe output, bad payload `422`, invalid service token `401`, missing Authorization header `401`, and malformed Authorization header `401`.
+- [X] T-C019c [US1] Wire `guardrails/app/main.py` to load `guardrails/config/config.yml` and execute NeMo Guardrails flows from `platform_rails.co`; keep deterministic checks as a fallback if NeMo loading fails in local demo mode.
+- [X] T-C019d [US1] Wire NeMo runtime to the real Anthropic provider: remove the placeholder Claude-compatible `base_url` from `guardrails/config/config.yml`, consume `ANTHROPIC_API_KEY` from the guardrails container environment supplied by Vault/Docker Compose, add any required Anthropic provider dependency for NeMo, and verify `LLMRails` loads without using the fake `http://claude-compatible:8000/v1` endpoint. Do not hardcode secrets.
+- [X] T-C019e [US1] Load `GUARDRAILS_SERVICE_TOKEN` from Vault in the guardrails sidecar: add guardrails-side config loading using `VAULT_ADDR`, `VAULT_ROOT_TOKEN`, and `secret/concierge`; keep environment fallback for local dev; update `/rails/input` and `/rails/output` auth to use the loaded token.
+- [X] T-C019f [US1] Add new prompt-injection, cross-tenant, and system-prompt extraction variants to platform rails and fallback checks; add tests proving they return the correct platform reason instead of `off_topic`.
+- [X] T-C020 Create `guardrails/Dockerfile`: uv-based build using `python:3.12-slim`; copy `app/`, `config/`, `pyproject.toml`, and `uv.lock`; install with `uv sync --frozen`; verify no torch or transformers; target < 500 MB.
 
 **Checkpoint**: Both guardrails sidecar endpoints pass their contracts. `POST /rails/input` with a prompt injection attempt returns `allowed: false`. `POST /rails/input` with a normal question returns `allowed: true`.
 
@@ -87,7 +87,7 @@ cross-tenant attempts, and jailbreak — while passing normal messages.
 PII redaction tasks (T-C021/T-C021a/T-C021b/T-C021c) moved to Owner A (Phase 8).
 
 - [x] T-C021-deps [P] [US1] API runtime dependencies include `presidio-analyzer`, `presidio-anonymizer`, `spacy` — completed by Owner A.
-- [ ] T-C022 [P] [US1] Create `api/app/guardrails_client.py`: async HTTP client for the guardrails sidecar; consume `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN` from API settings provided by Owner A; expected internal URL is `http://guardrails:8002`; send `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>`; expose `check_input(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult` and `check_output(...)`; retry on 503.
+- [X] T-C022 [P] [US1] Create `api/app/guardrails_client.py`: async HTTP client for the guardrails sidecar; consume `GUARDRAILS_BASE_URL` and `GUARDRAILS_SERVICE_TOKEN` from API settings provided by Owner A; expected internal URL is `http://guardrails:8002`; send `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>`; expose `check_input(tenant_id, conversation_id, content, tenant_rails) -> GuardrailsResult` and `check_output(...)`; retry on 503.
 - [ ] T-C022a [P] [US1] Create tests for `api/app/guardrails_client.py`: assert `GUARDRAILS_BASE_URL` is used, `Authorization: Bearer <GUARDRAILS_SERVICE_TOKEN>` is sent, and mock `httpx.AsyncClient` responses for allowed, blocked, missing/invalid token, bad payload, and `503` retry behavior; include one integration test against a running `guardrails` container when available.
 - [ ] T-C022b [US1/US2] Define and test Retriever Rails contract/client: add retrieval guardrail request/response schemas, sidecar endpoint/client helper, and tests for blocking unsafe retrieved chunks before they enter LLM context. Coordinate Owner B wiring into `_rag_workflow` and `RagSearchTool.__call__`.
 **Checkpoint**: Guardrails client integration test passes against running sidecar container.
@@ -100,8 +100,8 @@ PII redaction tasks (T-C021/T-C021a/T-C021b/T-C021c) moved to Owner A (Phase 8).
 
 **Independent Test**: `pytest api/tests/red_team/ -v` — all probes return refusals.
 
-- [ ] T-C023 [US2] Create `api/tests/red_team/probes.yaml` with at least 6 adversarial probes covering: (1) prompt injection via chat, (2) cross-tenant data extraction attempt, (3) system prompt extraction, (4) jailbreak ("DAN" style), (5) Tenant A token + Tenant B data in body, (6) stale/forged JWT — each probe has `input`, `expected_refused: true`, `probe_type`
-- [ ] T-C024 [US2] Create `api/tests/red_team/test_probes.py`: load `probes.yaml`, for each probe send to `POST /chat/messages` against the running stack, assert HTTP response is either 401/403 OR response body contains the guardrails refusal message and zero Tenant B data appears in the response
+- [X] T-C023 [US2] Create `api/tests/red_team/probes.yaml` with at least 6 adversarial probes covering: (1) prompt injection via chat, (2) cross-tenant data extraction attempt, (3) system prompt extraction, (4) jailbreak ("DAN" style), (5) Tenant A token + Tenant B data in body, (6) stale/forged JWT — each probe has `input`, `expected_refused: true`, `probe_type`
+- [X] T-C024 [US2] Create `api/tests/red_team/test_probes.py`: load `probes.yaml`, for each probe send to `POST /chat/messages` against the running stack, assert HTTP response is either 401/403 OR response body contains the guardrails refusal message and zero Tenant B data appears in the response
 
 **Checkpoint**: All 6 probes refused. Red-team pass_rate = 1.00 (matches `eval_thresholds.yaml`).
 
@@ -115,7 +115,7 @@ PII redaction tasks (T-C021/T-C021a/T-C021b/T-C021c) moved to Owner A (Phase 8).
 macro-F1 ≥ 0.70 reported.
 
 - [ ] T-C025 [US5] Create `api/tests/evals/test_classifier.py`: load `evals/classifier/test_set.csv`; for each row call `POST /classify` on the running modelserver; compute macro-F1 across all predictions; assert macro-F1 ≥ `eval_thresholds.yaml` `classifier.macro_f1` value (0.70)
-- [ ] T-C026 [US5] Create `api/tests/evals/test_redaction.py`: paste a synthetic API key (`sk-test-1234567890abcdef`) into chat via `POST /chat/messages`; assert the key string never appears in: the HTTP response body, any `messages` row in the DB, any Redis session key — CI redaction pass_rate must be 1.00
+- [X] T-C026 [US5] Create `api/tests/evals/test_redaction.py`: paste a synthetic API key (`sk-test-1234567890abcdef`) into chat via `POST /chat/messages`; assert the key string never appears in: the HTTP response body, any `messages` row in the DB, any Redis session key — CI redaction pass_rate must be 1.00
 
 **Checkpoint**: Both eval tests pass. Classifier macro-F1 ≥ 0.70 confirmed in CI output.
 

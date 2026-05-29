@@ -83,8 +83,8 @@ jobs:
       matrix:
         test:
           - api/tests/evals/test_classifier.py
-          - api/tests/evals/test_rag.py
-          - api/tests/evals/test_agent.py
+          - evals/rag/test_rag.py
+          - evals/agent/test_agent.py
           - api/tests/red_team/test_probes.py
           - api/tests/evals/test_redaction.py
     steps:

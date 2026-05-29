@@ -139,16 +139,16 @@ async def post_message(
         if await guardrails_client.check_output(result.response, tenant_id, conversation.id):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Response blocked by platform policy.")
 
-        # 8. PII-redact response
-        redaction_result = redaction.redact(result.response)
-        safe_response = redaction_result.text
+        # 8. PII-redact both user input and assistant response before any persistence
+        safe_user_content = redaction.redact(body.content).text
+        safe_response = redaction.redact(result.response).text
 
-        # 9. Persist messages
+        # 9. Persist messages (redacted content only — never raw PII in DB)
         session.add(Message(
             tenant_id=tenant_id,
             conversation_id=conversation.id,
             role="user",
-            content=body.content,
+            content=safe_user_content,
         ))
         session.add(Message(
             tenant_id=tenant_id,
@@ -158,8 +158,8 @@ async def post_message(
         ))
         await session.flush()
 
-        # 10. Update Redis session history
-        await append_to_session(tenant_id, conversation.id, "user", body.content)
+        # 10. Update Redis session history (redacted content only)
+        await append_to_session(tenant_id, conversation.id, "user", safe_user_content)
         await append_to_session(tenant_id, conversation.id, "assistant", safe_response)
 
         await session.commit()
