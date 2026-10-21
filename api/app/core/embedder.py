@@ -7,10 +7,14 @@ from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
-VOYAGE_MODEL = "voyage-3"
-RERANK_MODEL = "rerank-2"
+VOYAGE_MODEL = "voyage-4"
+RERANK_MODEL = "rerank-3"
 EMBEDDING_DIM = 1024
 _MAX_ATTEMPTS = 3
+# Voyage accounts without a payment method are capped at 3 requests/min, so a
+# rate-limited call waits out the window instead of failing (slow, but succeeds).
+_RATE_LIMIT_ATTEMPTS = 6
+_RATE_LIMIT_WAIT_S = 21
 
 _client: voyageai.AsyncClient | None = None
 _sync_client: voyageai.Client | None = None
@@ -31,18 +35,33 @@ def _get_sync_client() -> voyageai.Client:
 
 
 async def embed(texts: list[str], *, input_type: str = "document") -> list[list[float]]:
-    """Embed a batch of texts with retry (3 attempts, exponential backoff)."""
-    last_exc: Exception | None = None
-    for attempt in range(_MAX_ATTEMPTS):
+    """Embed a batch of texts with retry.
+
+    Rate-limit errors wait out the per-minute window (up to 6 tries); other errors
+    get 3 attempts with exponential backoff.
+    """
+    attempt = 0
+    rate_limited = 0
+    while True:
         try:
             result = await get_client().embed(texts, model=VOYAGE_MODEL, input_type=input_type)
             return result.embeddings
-        except Exception as exc:
-            last_exc = exc
-            if attempt < _MAX_ATTEMPTS - 1:
-                await asyncio.sleep(2**attempt)
-
-    raise last_exc  # type: ignore[misc]
+        except voyageai.error.RateLimitError:
+            rate_limited += 1
+            if rate_limited >= _RATE_LIMIT_ATTEMPTS:
+                raise
+            logger.warning(
+                "voyage rate limited (try %d/%d), waiting %ds",
+                rate_limited,
+                _RATE_LIMIT_ATTEMPTS,
+                _RATE_LIMIT_WAIT_S,
+            )
+            await asyncio.sleep(_RATE_LIMIT_WAIT_S)
+        except Exception:
+            attempt += 1
+            if attempt >= _MAX_ATTEMPTS:
+                raise
+            await asyncio.sleep(2 ** (attempt - 1))
 
 
 async def embed_query(text: str) -> list[float]:
@@ -52,7 +71,7 @@ async def embed_query(text: str) -> list[float]:
 
 
 async def rerank(query: str, documents: list[str], top_k: int = 5) -> list[int]:
-    """Rerank documents by relevance to query using voyage-rerank-2.
+    """Rerank documents by relevance to query using voyage rerank-3.
 
     Returns indices into `documents` in ranked order (most relevant first).
     Runs the synchronous Voyage SDK call in a thread pool to avoid blocking.

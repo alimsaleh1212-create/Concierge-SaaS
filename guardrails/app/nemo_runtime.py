@@ -14,7 +14,7 @@ from nemoguardrails.llm.frameworks import set_default_framework
 
 
 GuardrailsDirection = Literal["input", "output"]
-ANTHROPIC_API_KEY_ENV = "ANTHROPIC_API_KEY"
+GROQ_API_KEY_ENV = "GROQ_API_KEY"
 
 
 @dataclass(frozen=True)
@@ -41,8 +41,8 @@ class NemoRuntime:
     def check(self, content: str, direction: GuardrailsDirection) -> NemoCheckResult:
         try:
             rails = self._get_rails()
-            if not os.getenv(ANTHROPIC_API_KEY_ENV):
-                raise RuntimeError(f"{ANTHROPIC_API_KEY_ENV} is not configured")
+            if not os.getenv(GROQ_API_KEY_ENV):
+                raise RuntimeError(f"{GROQ_API_KEY_ENV} is not configured")
             result = rails.generate(
                 messages=[
                     {"role": "user", "content": self._format_prompt(content, direction)},

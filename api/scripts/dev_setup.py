@@ -13,7 +13,7 @@ What it does:
 Prerequisites:
   - docker compose -f ../docker-compose.dev.yml up -d (Postgres + Redis running)
   - DEV_MODE=true in ../.env
-  - ANTHROPIC_API_KEY and VOYAGE_API_KEY set in ../.env (needed for embedding)
+  - GROQ_API_KEY and VOYAGE_API_KEY set in ../.env (needed for embedding)
 """
 import asyncio
 import datetime
