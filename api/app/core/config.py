@@ -32,8 +32,11 @@ class Settings(BaseSettings):
     MODELSERVER_SERVICE_TOKEN: str = ""
     GUARDRAILS_SERVICE_TOKEN: str = ""
     JWT_SECRET: str = ""
-    ANTHROPIC_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
     VOYAGE_API_KEY: str = ""
+
+    # Not secret — read from .env / environment, never from Vault
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
 
     class Config:
         env_file = _ENV_FILE
@@ -65,5 +68,5 @@ def _load_vault_secrets(settings: Settings) -> None:
     settings.MODELSERVER_SERVICE_TOKEN = data["MODELSERVER_SERVICE_TOKEN"]
     settings.GUARDRAILS_SERVICE_TOKEN = data["GUARDRAILS_SERVICE_TOKEN"]
     settings.JWT_SECRET = data["JWT_SECRET"]
-    settings.ANTHROPIC_API_KEY = data["ANTHROPIC_API_KEY"]
+    settings.GROQ_API_KEY = data["GROQ_API_KEY"]
     settings.VOYAGE_API_KEY = data["VOYAGE_API_KEY"]

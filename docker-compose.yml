@@ -40,7 +40,7 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:latest
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: minioadmin
@@ -76,18 +76,26 @@ services:
     depends_on:
       vault:
         condition: service_healthy
-      minio:
-        condition: service_healthy
     environment:
       VAULT_ADDR: http://vault:8200
       VAULT_TOKEN: ${VAULT_ROOT_TOKEN:-dev-root-token}
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      GROQ_API_KEY: ${GROQ_API_KEY}
       VOYAGE_API_KEY: ${VOYAGE_API_KEY}
     volumes:
       - ./vault/init.sh:/init.sh:ro
     entrypoint: ["sh", "/init.sh"]
+    restart: "no"
+
+  # dl.min.io no longer serves the mc binary, so bucket setup uses the mc image
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint:
+      - sh
+      - -c
+      - "mc alias set local http://minio:9000 minioadmin minioadmin && mc mb --ignore-existing local/concierge-widget && mc mb --ignore-existing local/concierge-cms"
     restart: "no"
 
   jaeger:
@@ -129,6 +137,8 @@ services:
       vault:
         condition: service_healthy
       vault-init:
+        condition: service_completed_successfully
+      minio-init:
         condition: service_completed_successfully
       jaeger:
         condition: service_healthy
@@ -199,6 +209,14 @@ services:
   widget-build:
     image: node:20-alpine
     working_dir: /widget
+    entrypoint: ["sh", "-c", "npm ci --silent && npm run build"]
+    volumes:
+      - ./widget:/widget
+    restart: "no"
+
+  widget-upload:
+    image: quay.io/minio/mc:latest
+    working_dir: /widget
     environment:
       MINIO_ENDPOINT: http://minio:9000
       MINIO_ACCESS_KEY: minioadmin
@@ -207,13 +225,13 @@ services:
     entrypoint:
       - sh
       - -c
-      - "wget -q https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc && chmod +x /usr/local/bin/mc && npm ci --silent && npm run build && sh scripts/upload-bundle.sh && mc anonymous set download minio/concierge-widget"
+      - "sh scripts/upload-bundle.sh && mc anonymous set download minio/concierge-widget"
     volumes:
       - ./widget:/widget
     depends_on:
-      minio:
-        condition: service_healthy
-      vault-init:
+      widget-build:
+        condition: service_completed_successfully
+      minio-init:
         condition: service_completed_successfully
     restart: "no"
 

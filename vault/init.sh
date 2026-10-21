@@ -1,5 +1,5 @@
 #!/bin/sh
-# Idempotent Vault + MinIO bootstrap — runs once on `docker compose up` via vault-init service.
+# Idempotent Vault bootstrap (MinIO buckets are created by the minio-init service) — runs once on `docker compose up` via vault-init service.
 # Exits 0 on success. Safe to re-run; skips secrets that already exist.
 set -e
 
@@ -28,29 +28,10 @@ else
     MODELSERVER_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
     GUARDRAILS_SERVICE_TOKEN="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 43)" \
     JWT_SECRET="$(cat /dev/urandom | head -c 48 | base64 | tr -d '=+/' | head -c 64)" \
-    ANTHROPIC_API_KEY="${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY must be set in .env}" \
+    GROQ_API_KEY="${GROQ_API_KEY:?GROQ_API_KEY must be set in .env}" \
     VOYAGE_API_KEY="${VOYAGE_API_KEY:?VOYAGE_API_KEY must be set in .env}"
 
   echo "[vault-init] Secrets written."
 fi
 
-# Create MinIO buckets (idempotent — mc mb --ignore-existing)
-echo "[vault-init] Configuring MinIO buckets..."
-
-# Install mc if not present
-if ! command -v mc > /dev/null 2>&1; then
-  echo "[vault-init] Downloading MinIO client..."
-  wget -q "https://dl.min.io/client/mc/release/linux-amd64/mc" -O /usr/local/bin/mc
-  chmod +x /usr/local/bin/mc
-fi
-
-MINIO_HOST="${MINIO_ROOT_USER:-minioadmin}"
-MINIO_PASS="${MINIO_ROOT_PASSWORD:-minioadmin}"
-
-mc alias set local http://minio:9000 "$MINIO_HOST" "$MINIO_PASS" --api S3v4 > /dev/null 2>&1
-
-mc mb --ignore-existing local/concierge-widget
-mc mb --ignore-existing local/concierge-cms
-
-echo "[vault-init] MinIO buckets ready."
 echo "[vault-init] Bootstrap complete."

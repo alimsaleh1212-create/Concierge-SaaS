@@ -1,7 +1,7 @@
 models:
   - type: main
-    engine: anthropic
-    model: claude-3-5-sonnet-latest
+    engine: groq
+    model: openai/gpt-oss-120b
     parameters:
       temperature: 0.1
 

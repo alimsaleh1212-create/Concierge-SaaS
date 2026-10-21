@@ -30,7 +30,7 @@ async def retrieve(
 ) -> list[ParentChunk]:
     """Return top-k parent chunks for query, scoped to tenant_id.
 
-    Active strategy: reranking (voyage-rerank-2).
+    Active strategy: reranking (voyage rerank-3).
     Run evals/rag/test_rag.py::test_rag_strategy_comparison for a full comparison.
     """
     return await _retrieve_with_rerank(query, tenant_id, session, top_k)

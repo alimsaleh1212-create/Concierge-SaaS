@@ -43,9 +43,9 @@ Browser Widget  ──►  API (FastAPI)  ──►  Postgres 16 + pgvector
 | Language | Python 3.12 (API, modelserver, guardrails) · TypeScript / Node 20 (widget) |
 | API framework | FastAPI 0.115+ with SQLAlchemy 2.x + Alembic |
 | Database | Postgres 16 + pgvector |
-| LLM | Anthropic claude-sonnet-4-6 |
-| Embeddings | Voyage AI `voyage-3` (hosted API) |
-| Reranker | Voyage AI `rerank-2` |
+| LLM | Groq `openai/gpt-oss-120b` (see DECISIONS.md D-013) |
+| Embeddings | Voyage AI `voyage-4` (hosted API) |
+| Reranker | Voyage AI `rerank-3` |
 | Classifier | TF-IDF (word 1–2-gram) + Logistic Regression, exported as joblib |
 | Guardrails | NeMo Guardrails sidecar |
 | PII redaction | Microsoft Presidio |
@@ -99,9 +99,9 @@ See [modelserver/artifacts/model_card.md](modelserver/artifacts/model_card.md) f
 ## RAG Pipeline
 
 1. **Chunking** — parent-child sentence-aware chunking (`child_size=2` sentences, `parent_size=5`-sentence window centred on the child).
-2. **Embedding** — Voyage AI `voyage-3` (1024-dim, hosted API).
+2. **Embedding** — Voyage AI `voyage-4` (1024-dim, hosted API).
 3. **Retrieval** — cosine similarity search in pgvector, scoped to `tenant_id`.
-4. **Reranking** — Voyage AI `rerank-2` cross-encoder (cosine top-15 → rerank → top-5). Selected over query-rewriting and HyDE — see [DECISIONS.md](docs/DECISIONS.md) `RAG-001`.
+4. **Reranking** — Voyage AI `rerank-3` cross-encoder (cosine top-15 → rerank → top-5). Selected over query-rewriting and HyDE — see [DECISIONS.md](docs/DECISIONS.md) `RAG-001`.
 
 **Eval results** (15-triple golden set, `evals/rag/golden_set.yaml`):
 
@@ -117,7 +117,7 @@ The `route()` function in `api/app/agent/router.py` classifies every inbound mes
 | Classifier result | Dispatch |
 |-------------------|----------|
 | `spam` | Deterministic refusal — no LLM call |
-| confidence ≥ 0.75 AND label = `support` | RAG workflow (retrieve → prompt → Claude) |
+| confidence ≥ 0.75 AND label = `support` | RAG workflow (retrieve → prompt → LLM) |
 | confidence ≥ 0.75 AND label = `sales_or_leads` | Lead-capture workflow |
 | confidence ≥ 0.75 AND label = `human_request` | Escalate workflow |
 | low confidence or `faq` / `other` | Full tool-calling agent loop (max 5 iterations) |
@@ -147,7 +147,7 @@ Tenant admins can add topical guardrails (allowed/blocked topics) from the Strea
 
 - **Widget auth**: PyJWT signed per-widget token (1-hour expiry) + server-side origin check (CORS + CSP).
 - **Service-to-service auth**: Vault-issued HS256 service JWTs for `api → modelserver` and `api → guardrails` calls.
-- **PII redaction**: Presidio anonymises PII in visitor messages before they reach Claude or are stored.
+- **PII redaction**: Presidio anonymises PII in visitor messages before they reach the LLM or are stored.
 - **Tenant ID**: sourced exclusively from the verified JWT — never from the request body.
 - **Rate limiting**: 60 req/min per tenant on `/chat/messages`; `capture_lead` capped at 3/session and 5/IP/hour.
 - **Secrets**: all credentials live in Vault; none in source, `.env`, or container images.
@@ -175,7 +175,7 @@ Thresholds live in `eval_thresholds.yaml` — they can only be raised, never low
 ### Prerequisites
 
 - Docker + Docker Compose
-- `ANTHROPIC_API_KEY` and `VOYAGE_API_KEY`
+- `GROQ_API_KEY` ([console.groq.com](https://console.groq.com)) and `VOYAGE_API_KEY` ([dashboard.voyageai.com](https://dashboard.voyageai.com))
 
 ### Setup
 
@@ -184,7 +184,7 @@ Thresholds live in `eval_thresholds.yaml` — they can only be raised, never low
 git clone https://github.com/alimsaleh1212-create/Concierge-SaaS.git
 cd Concierge-SaaS
 cp .env.example .env
-# Edit .env — fill in ANTHROPIC_API_KEY and VOYAGE_API_KEY
+# Edit .env — fill in GROQ_API_KEY and VOYAGE_API_KEY
 
 # 2. Start all services (Vault init and DB migrations run automatically)
 docker compose up --build
