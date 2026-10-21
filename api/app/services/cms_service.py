@@ -5,7 +5,7 @@ from fastapi import BackgroundTasks
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import AsyncSessionLocal, set_tenant_context
 from app.models.cms_content import CmsContent
 from app.models.embedding import Embedding
 from app.repositories.cms_repo import CmsRepository
@@ -63,6 +63,8 @@ async def _ingest_embeddings(content_id: uuid.UUID, tenant_id: uuid.UUID) -> Non
     from app.rag.ingester import ingest_content
 
     async with AsyncSessionLocal() as session:
+        # Own session outside the request: set the tenant or RLS hides the row
+        await set_tenant_context(session, tenant_id)
         result = await session.execute(
             select(CmsContent).where(CmsContent.id == content_id, CmsContent.is_deleted == False)  # noqa: E712
         )

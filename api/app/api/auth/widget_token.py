@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_system_db
 from app.core.security import verify_password
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -38,7 +38,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/login", response_model=LoginResponse)
 async def login(
     form: OAuth2PasswordRequestForm = Depends(),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> LoginResponse:
     """Email + password → JWT bearer token.
 
@@ -65,7 +65,7 @@ async def login(
 @router.post("/widget-token", response_model=WidgetTokenResponse)
 async def create_widget_token(
     payload: WidgetTokenRequest,
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> WidgetTokenResponse:
     widget_result = await session.execute(
         select(Widget).filter(

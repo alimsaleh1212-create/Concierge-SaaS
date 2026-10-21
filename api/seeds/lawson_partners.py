@@ -8,7 +8,7 @@ import secrets
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import AsyncSessionLocal
+from app.core.database import SystemSessionLocal
 from app.core.security import get_password_hash
 from app.models.cms_content import CmsContent
 from app.models.tenant import Tenant
@@ -148,7 +148,7 @@ async def seed(session: AsyncSession) -> None:
 
 if __name__ == "__main__":
     async def main():
-        async with AsyncSessionLocal() as session:
+        async with SystemSessionLocal() as session:
             await seed(session)
 
     asyncio.run(main())

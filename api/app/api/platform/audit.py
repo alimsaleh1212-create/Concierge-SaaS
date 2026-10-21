@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_system_db
 from app.models.audit_log import AuditLog
 from app.services.auth_service import require_role
 
@@ -20,7 +20,7 @@ async def get_audit_log(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     current_user: dict = Depends(_tenant_manager),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> dict:
     stmt = select(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit).offset(offset)
     if tenant_id is not None:

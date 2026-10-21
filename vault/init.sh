@@ -13,14 +13,18 @@ done
 
 echo "[vault-init] Vault is ready. Checking if secrets already exist..."
 
-# Check idempotency — skip if concierge secret already written
-if vault kv get -address="$VAULT_ADDR" -mount=secret concierge > /dev/null 2>&1; then
+# Check idempotency — skip if the current secret layout is already written
+if vault kv get -address="$VAULT_ADDR" -mount=secret -field=SYSTEM_DATABASE_URL concierge > /dev/null 2>&1; then
   echo "[vault-init] Secrets already exist — skipping write."
 else
   echo "[vault-init] Writing secrets to Vault..."
 
+  # Password for the NOBYPASSRLS app role; the API syncs it on boot (scripts/ensure_app_role.py)
+  APP_DB_PASSWORD="$(cat /dev/urandom | head -c 32 | base64 | tr -d '=+/' | head -c 32)"
+
   vault kv put -address="$VAULT_ADDR" secret/concierge \
-    DATABASE_URL="postgresql+asyncpg://concierge:concierge@postgres:5432/concierge" \
+    DATABASE_URL="postgresql+asyncpg://concierge_app:${APP_DB_PASSWORD}@postgres:5432/concierge" \
+    SYSTEM_DATABASE_URL="postgresql+asyncpg://concierge:concierge@postgres:5432/concierge" \
     REDIS_URL="redis://redis:6379/0" \
     MINIO_ENDPOINT="minio:9000" \
     MINIO_ACCESS_KEY="${MINIO_ROOT_USER:-minioadmin}" \
