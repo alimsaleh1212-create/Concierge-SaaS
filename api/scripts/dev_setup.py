@@ -13,6 +13,8 @@ What it does:
 Prerequisites:
   - docker compose -f ../docker-compose.dev.yml up -d (Postgres + Redis running)
   - DEV_MODE=true in ../.env
+  - DATABASE_URL (app role, e.g. concierge_app) and SYSTEM_DATABASE_URL (owner) in ../.env;
+    after migrations, create the app role with `python -m app.core.db_roles`
   - GROQ_API_KEY and VOYAGE_API_KEY set in ../.env (needed for embedding)
 """
 import asyncio
@@ -32,7 +34,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.core.config import get_settings
 get_settings.cache_clear()  # ensure fresh read of .env, not a stale cached instance
-from app.core.database import AsyncSessionLocal, Base
+from app.core.database import Base, SystemSessionLocal
 from app.models import *  # noqa: F401,F403 — registers all ORM models with Base
 from app.models.tenant import Tenant
 from app.models.user import User
@@ -41,7 +43,7 @@ from app.models.widget import Widget
 
 async def create_tables() -> None:
     settings = get_settings()
-    engine = create_async_engine(settings.DATABASE_URL, echo=False)
+    engine = create_async_engine(settings.SYSTEM_DATABASE_URL, echo=False)
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
@@ -55,7 +57,7 @@ _PLATFORM_MANAGER_PASSWORD = "platform-demo-change-me"
 
 async def seed_platform_manager() -> None:
     from app.core.security import get_password_hash
-    async with AsyncSessionLocal() as session:
+    async with SystemSessionLocal() as session:
         result = await session.execute(select(User).where(User.email == _PLATFORM_MANAGER_EMAIL))
         if result.scalar_one_or_none() is None:
             session.add(User(
@@ -75,10 +77,10 @@ async def run_seeds() -> None:
     from seeds.marios_pizza import seed as seed_novatech
     from seeds.lawson_partners import seed as seed_learnsphere
 
-    async with AsyncSessionLocal() as session:
+    async with SystemSessionLocal() as session:
         await seed_novatech(session)
 
-    async with AsyncSessionLocal() as session:
+    async with SystemSessionLocal() as session:
         await seed_learnsphere(session)
 
     await seed_platform_manager()
@@ -101,7 +103,7 @@ async def print_demo_tokens() -> None:
         print("[setup] JWT_SECRET not set — skipping token minting")
         return
 
-    async with AsyncSessionLocal() as session:
+    async with SystemSessionLocal() as session:
         for slug in ("novatech-electronics", "learnsphere"):
             result = await session.execute(select(Tenant).where(Tenant.slug == slug))
             tenant = result.scalar_one_or_none()

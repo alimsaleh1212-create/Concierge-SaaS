@@ -10,7 +10,7 @@ from app import guardrails_client, redaction
 from app.agent.agent import TenantContext
 from app.agent.memory import append_to_session, get_session_history
 from app.agent.router import route
-from app.core.database import get_db
+from app.core.database import get_db, get_system_db
 from app.models.message import Message
 from app.repositories.conversation_repo import ConversationRepository
 from app.repositories.tenant_repo import TenantRepository
@@ -43,6 +43,9 @@ def _decode_widget_jwt_unverified(token: str) -> dict:
 async def _verify_widget_jwt(token: str, session: AsyncSession) -> tuple[dict, dict]:
     """Look up the widget's own secret then fully verify the token.
     Returns (claims, tenant_rails) where tenant_rails is the widget's guardrails config.
+
+    `session` must be a system session: the tenant is unknown until the token is
+    verified, so an RLS-bound session cannot see the widget row.
     """
     from sqlalchemy import select
     from app.models.widget import Widget
@@ -82,10 +85,11 @@ async def post_message(
     request: Request,
     body: ChatRequest,
     session: AsyncSession = Depends(get_db),
+    system_session: AsyncSession = Depends(get_system_db),
 ) -> ChatResponse:
     # 1. Verify widget JWT → extract tenant_id, widget_id, session_id + widget tenant_rails
     token = _extract_bearer(request)
-    claims, tenant_rails = await _verify_widget_jwt(token, session)
+    claims, tenant_rails = await _verify_widget_jwt(token, system_session)
     tenant_id = uuid.UUID(claims["tenant_id"])
     widget_id = uuid.UUID(claims["widget_id"])
     session_id: str = claims["session_id"]

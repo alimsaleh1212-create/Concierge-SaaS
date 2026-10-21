@@ -22,7 +22,10 @@ class Settings(BaseSettings):
     VAULT_ROOT_TOKEN: str = ""
 
     # Populated from Vault at startup (or from .env when DEV_MODE=true)
+    # App role (NOBYPASSRLS) for request traffic; owner role for system work.
+    # See core/database.py and scripts/ensure_app_role.py.
     DATABASE_URL: str = ""
+    SYSTEM_DATABASE_URL: str = ""
     REDIS_URL: str = ""
     MINIO_ENDPOINT: str = ""
     MINIO_ACCESS_KEY: str = ""
@@ -61,6 +64,7 @@ def _load_vault_secrets(settings: Settings) -> None:
     data: dict = secret["data"]["data"]
 
     settings.DATABASE_URL = data["DATABASE_URL"]
+    settings.SYSTEM_DATABASE_URL = data["SYSTEM_DATABASE_URL"]
     settings.REDIS_URL = data["REDIS_URL"]
     settings.MINIO_ENDPOINT = data["MINIO_ENDPOINT"]
     settings.MINIO_ACCESS_KEY = data["MINIO_ACCESS_KEY"]

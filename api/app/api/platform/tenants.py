@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.database import get_db
+from app.core.database import get_system_db
 from app.repositories.tenant_repo import TenantRepository
 from app.services import tenant_service, erasure_service, cost_service
 from app.services.auth_service import require_role
@@ -37,7 +37,7 @@ def _actor_id(current_user: dict) -> uuid.UUID:
 async def provision_tenant(
     body: ProvisionRequest,
     current_user: dict = Depends(_tenant_manager),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> dict:
     tenant = await tenant_service.provision_tenant(
         session, _actor_id(current_user), body.name, body.slug, body.allowed_origins
@@ -51,7 +51,7 @@ async def invite_admin(
     tenant_id: uuid.UUID,
     body: InviteRequest,
     current_user: dict = Depends(_tenant_manager),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> dict:
     user = await tenant_service.invite_admin(
         session, _actor_id(current_user), tenant_id, body.email
@@ -65,7 +65,7 @@ async def suspend_tenant(
     tenant_id: uuid.UUID,
     body: SuspendRequest,
     current_user: dict = Depends(_tenant_manager),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> dict:
     tenant = await tenant_service.suspend_tenant(
         session, _actor_id(current_user), tenant_id
@@ -78,7 +78,7 @@ async def suspend_tenant(
 async def erase_tenant(
     tenant_id: uuid.UUID,
     current_user: dict = Depends(_tenant_manager),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> dict:
     await erasure_service.erase_tenant(session, _actor_id(current_user), tenant_id)
     await session.commit()
@@ -92,7 +92,7 @@ async def erase_tenant(
 @router.get("", status_code=200)
 async def list_tenants(
     current_user: dict = Depends(_tenant_manager),
-    session: AsyncSession = Depends(get_db),
+    session: AsyncSession = Depends(get_system_db),
 ) -> dict:
     repo = TenantRepository(session)
     tenants = await repo.list_active()

@@ -17,7 +17,8 @@ target_metadata = Base.metadata
 
 
 def get_url() -> str:
-    return get_settings().DATABASE_URL
+    # Migrations run as the table owner, not the RLS-bound app role
+    return get_settings().SYSTEM_DATABASE_URL
 
 
 def run_migrations_offline() -> None:
