@@ -13,6 +13,7 @@ from app.agent.router import route
 from app.core.database import get_db
 from app.models.message import Message
 from app.repositories.conversation_repo import ConversationRepository
+from app.repositories.tenant_repo import TenantRepository
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -116,12 +117,17 @@ async def post_message(
 
         history = await get_session_history(tenant_id, conversation.id)
 
-        # 5. Build tenant context
+        # 5. Build tenant context — tenant name comes from the DB row for the verified
+        #    tenant_id; the widget JWT carries no name, and without one the agent
+        #    adopts whatever business the visitor mentions.
+        tenant = await TenantRepository(session).get(tenant_id)
+        if tenant is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid widget token")
         tenant_ctx = TenantContext(
             tenant_id=tenant_id,
             widget_id=widget_id,
             conversation_id=conversation.id,
-            tenant_name=claims.get("tenant_name", "our business"),
+            tenant_name=tenant.name,
             persona=claims.get("persona", "a helpful customer service agent"),
             allowed_topics=claims.get("allowed_topics", "questions related to our business"),
             visitor_ip=request.client.host if request.client else None,

@@ -94,13 +94,19 @@ async def _rag_workflow(
 
     prompt = (
         _load_rag_answer()
+        .replace("{{tenant_name}}", tenant_ctx.tenant_name)
         .replace("{{context}}", context or "No relevant information found.")
         .replace("{{question}}", message)
     )
 
     response = await chat_completion(
         messages=messages + [{"role": "user", "content": prompt}],
-        system=f"You are a helpful assistant for {tenant_ctx.tenant_name}.",
+        system=(
+            f"You are the AI concierge for {tenant_ctx.tenant_name}. You represent "
+            f"{tenant_ctx.tenant_name} and no other business. Never attribute "
+            f"{tenant_ctx.tenant_name}'s products, prices or policies to another company, "
+            "and never answer as if you were another company."
+        ),
         max_tokens=1024,
         tenant_id=tenant_ctx.tenant_id,
         conversation_id=tenant_ctx.conversation_id,
